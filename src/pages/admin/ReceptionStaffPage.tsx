@@ -5,6 +5,7 @@ import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
 import { emailToUsername } from '../../lib/auth'
+import { createStaffAccount } from '../../lib/edgeFunctions'
 import { supabase } from '../../lib/supabase'
 import type { ResortStaff } from '../../types/database'
 
@@ -100,17 +101,15 @@ export function ReceptionStaffPage() {
     setSaving(true)
     setFormError(null)
 
-    const { error: invokeError } = await supabase.functions.invoke('create-staff-account', {
-      body: {
-        username: username.trim(),
-        password,
-        role: 'reception',
-        resort_id: resortId,
-      },
+    const result = await createStaffAccount({
+      username: username.trim(),
+      password,
+      role: 'reception',
+      resort_id: resortId,
     })
 
-    if (invokeError) {
-      setFormError(invokeError.message)
+    if (!result.ok) {
+      setFormError(result.message)
       setSaving(false)
       return
     }

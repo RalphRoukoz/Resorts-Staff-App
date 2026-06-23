@@ -4,6 +4,7 @@ import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { emailToUsername } from '../../lib/auth'
+import { createStaffAccount } from '../../lib/edgeFunctions'
 import { supabase } from '../../lib/supabase'
 import type { Resort, ResortStaff } from '../../types/database'
 
@@ -118,26 +119,15 @@ export function SuperResortAdminsPage() {
     setSaving(true)
     setFormError(null)
 
-    const { error: invokeError } = await supabase.functions.invoke('create-staff-account', {
-      body: {
-        username: username.trim(),
-        password,
-        role: 'admin',
-        resort_id: selectedResortId,
-      },
+    const result = await createStaffAccount({
+      username: username.trim(),
+      password,
+      role: 'admin',
+      resort_id: selectedResortId,
     })
 
-    if (invokeError) {
-      const isMissing =
-        invokeError.message.includes('404') ||
-        invokeError.message.toLowerCase().includes('not found') ||
-        invokeError.message.toLowerCase().includes('not deployed')
-
-      setFormError(
-        isMissing
-          ? 'Credential service not available yet — create the account manually for now.'
-          : invokeError.message,
-      )
+    if (!result.ok) {
+      setFormError(result.message)
       setSaving(false)
       return
     }
