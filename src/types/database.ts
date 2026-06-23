@@ -1,5 +1,14 @@
 export type StaffRole = 'admin' | 'reception'
 
+export interface SuperAdmin {
+  user_id: string
+}
+
+export interface ResortWithStats extends Resort {
+  chalet_count: number
+  invitation_count: number
+}
+
 export type InvitationStatus = 'issued' | 'validated' | 'cancelled' | 'expired'
 
 export type DayType = 'weekday' | 'weekend'

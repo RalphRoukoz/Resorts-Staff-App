@@ -12,9 +12,17 @@ import { TodayPage } from './pages/admin/TodayPage'
 import { LoginPage } from './pages/LoginPage'
 import { NoAccessPage } from './pages/NoAccessPage'
 import { ReceptionScanner } from './pages/reception/ReceptionScanner'
+import { SuperAdminLayout } from './pages/superadmin/SuperAdminLayout'
+import { SuperOverviewPage } from './pages/superadmin/SuperOverviewPage'
+import { SuperResortAdminsPage } from './pages/superadmin/SuperResortAdminsPage'
+import { SuperResortsPage } from './pages/superadmin/SuperResortsPage'
 
 function RootRedirect() {
-  const { hasAdmin, hasReception, view } = useAuth()
+  const { isSuperAdmin, hasAdmin, hasReception, view } = useAuth()
+
+  if (isSuperAdmin) {
+    return <Navigate to="/superadmin/overview" replace />
+  }
 
   if (hasAdmin && view === 'admin') {
     return <Navigate to="/admin/chalets" replace />
@@ -35,6 +43,12 @@ function RequireAuth({ children }: { children: ReactNode }) {
   if (!hasAccess) return <Navigate to="/no-access" replace />
 
   return children
+}
+
+function RequireSuperAdmin() {
+  const { isSuperAdmin } = useAuth()
+  if (!isSuperAdmin) return <Navigate to="/" replace />
+  return <Outlet />
 }
 
 function RequireAdmin() {
@@ -65,6 +79,24 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/no-access" element={<NoAccessPage />} />
 
+      {/* Super-admin console */}
+      <Route
+        path="/superadmin"
+        element={
+          <RequireAuth>
+            <RequireSuperAdmin />
+          </RequireAuth>
+        }
+      >
+        <Route element={<SuperAdminLayout />}>
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={<SuperOverviewPage />} />
+          <Route path="resorts" element={<SuperResortsPage />} />
+          <Route path="admins" element={<SuperResortAdminsPage />} />
+        </Route>
+      </Route>
+
+      {/* Resort admin dashboard */}
       <Route
         path="/admin"
         element={
@@ -84,6 +116,7 @@ export default function App() {
         </Route>
       </Route>
 
+      {/* Reception scanner */}
       <Route
         path="/scanner"
         element={
