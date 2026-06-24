@@ -3,12 +3,13 @@ import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { Spinner } from './components/ui/Spinner'
 import { useAuth } from './context/AuthContext'
 import { AdminLayout } from './pages/admin/AdminLayout'
-import { AntiResalePage } from './pages/admin/AntiResalePage'
-import { ChaletsPage } from './pages/admin/ChaletsPage'
+import { AnalyticsPage } from './pages/admin/AnalyticsPage'
+import { AnnouncementsPage } from './pages/admin/AnnouncementsPage'
 import { ReceptionStaffPage } from './pages/admin/ReceptionStaffPage'
 import { RentalsPage } from './pages/admin/RentalsPage'
-import { SettingsPage } from './pages/admin/SettingsPage'
+import { ResortConfigPage } from './pages/admin/ResortConfigPage'
 import { TodayPage } from './pages/admin/TodayPage'
+import { UnitsPage } from './pages/admin/UnitsPage'
 import { LoginPage } from './pages/LoginPage'
 import { NoAccessPage } from './pages/NoAccessPage'
 import { ReceptionScanner } from './pages/reception/ReceptionScanner'
@@ -25,7 +26,7 @@ function RootRedirect() {
   }
 
   if (hasAdmin && view === 'admin') {
-    return <Navigate to="/admin/chalets" replace />
+    return <Navigate to="/admin/units" replace />
   }
 
   if (hasReception) {
@@ -59,7 +60,7 @@ function RequireAdmin() {
 
 function RequireReception() {
   const { hasReception } = useAuth()
-  if (!hasReception) return <Navigate to="/admin/chalets" replace />
+  if (!hasReception) return <Navigate to="/admin/units" replace />
   return <Outlet />
 }
 
@@ -106,13 +107,14 @@ export default function App() {
         }
       >
         <Route element={<AdminLayout />}>
-          <Route index element={<Navigate to="chalets" replace />} />
-          <Route path="chalets" element={<ChaletsPage />} />
+          <Route index element={<Navigate to="units" replace />} />
+          <Route path="units" element={<UnitsPage />} />
           <Route path="rentals" element={<RentalsPage />} />
           <Route path="today" element={<TodayPage />} />
-          <Route path="anti-resale" element={<AntiResalePage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="reception-staff" element={<ReceptionStaffPage />} />
-          <Route path="settings" element={<SettingsPage />} />
+          <Route path="configuration" element={<ResortConfigPage />} />
         </Route>
       </Route>
 

@@ -1,50 +1,70 @@
+import type { CSSProperties } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
 
+const DEFAULT_BRAND = '#0ea5e9'
+
 const navItems = [
-  { to: '/admin/chalets', label: 'Chalets' },
+  { to: '/admin/units', label: 'Chalets & Cabines' },
   { to: '/admin/rentals', label: 'Rentals' },
   { to: '/admin/today', label: 'Today & Consumption' },
-  { to: '/admin/anti-resale', label: 'Anti-resale' },
+  { to: '/admin/analytics', label: 'Analytics' },
+  { to: '/admin/announcements', label: 'Announcements' },
   { to: '/admin/reception-staff', label: 'Reception staff' },
-  { to: '/admin/settings', label: 'Settings' },
+  { to: '/admin/configuration', label: 'Resort Configuration' },
 ]
 
 export function AdminLayout() {
   const { resort, hasReception, signOut, setView } = useAuth()
   const navigate = useNavigate()
 
+  const brand = resort?.primary_color || DEFAULT_BRAND
+
   function openScanner() {
     setView('reception')
     navigate('/scanner')
+  }
+
+  function navLinkStyle({ isActive }: { isActive: boolean }): CSSProperties {
+    return isActive ? { backgroundColor: `${brand}22`, color: brand } : {}
+  }
+
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `block rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+      isActive ? '' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+    }`
+
+  function BrandMark() {
+    if (resort?.logo_url) {
+      return (
+        <img
+          src={resort.logo_url}
+          alt={resort?.name ?? 'Resort'}
+          className="h-10 w-auto max-w-[180px] object-contain"
+        />
+      )
+    }
+    return (
+      <>
+        <p className="text-xs font-medium uppercase tracking-widest" style={{ color: brand }}>
+          Admin
+        </p>
+        <h1 className="mt-1 text-lg font-semibold text-white">{resort?.name ?? 'Resort'}</h1>
+      </>
+    )
   }
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-800 bg-slate-900 lg:flex">
         <div className="border-b border-slate-800 px-5 py-6">
-          <p className="text-xs font-medium uppercase tracking-widest text-sky-400">
-            Admin
-          </p>
-          <h1 className="mt-1 text-lg font-semibold text-white">
-            {resort?.name ?? 'Resort'}
-          </h1>
+          <BrandMark />
         </div>
 
         <nav className="flex-1 space-y-1 p-3">
           {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `block rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                  isActive
-                    ? 'bg-sky-600/20 text-sky-300'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                }`
-              }
-            >
+            <NavLink key={item.to} to={item.to} className={navLinkClass} style={navLinkStyle}>
               {item.label}
             </NavLink>
           ))}
@@ -64,9 +84,21 @@ export function AdminLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-3 lg:hidden">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-sky-400">Admin</p>
-            <p className="font-medium text-white">{resort?.name ?? 'Resort'}</p>
+          <div className="flex items-center gap-3">
+            {resort?.logo_url ? (
+              <img
+                src={resort.logo_url}
+                alt={resort?.name ?? 'Resort'}
+                className="h-8 w-auto max-w-[120px] object-contain"
+              />
+            ) : (
+              <div>
+                <p className="text-xs uppercase tracking-widest" style={{ color: brand }}>
+                  Admin
+                </p>
+                <p className="font-medium text-white">{resort?.name ?? 'Resort'}</p>
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             {hasReception ? (
@@ -87,9 +119,10 @@ export function AdminLayout() {
               to={item.to}
               className={({ isActive }) =>
                 `whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium ${
-                  isActive ? 'bg-sky-600/20 text-sky-300' : 'text-slate-400'
+                  isActive ? '' : 'text-slate-400'
                 }`
               }
+              style={navLinkStyle}
             >
               {item.label}
             </NavLink>

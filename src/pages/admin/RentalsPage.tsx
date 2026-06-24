@@ -5,7 +5,7 @@ import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, todayISO } from '../../lib/dates'
-import { formatPhoneError, isValidE164 } from '../../lib/phone'
+import { displayPhone, formatPhoneError, isValidPhone, normalizePhone } from '../../lib/phone'
 import { supabase } from '../../lib/supabase'
 import type { Asset, TenancyWithAsset } from '../../types/database'
 
@@ -76,7 +76,7 @@ export function RentalsPage() {
       setFormError('Select a chalet')
       return
     }
-    if (!isValidE164(form.tenant_phone)) {
+    if (!isValidPhone(form.tenant_phone)) {
       setFormError(formatPhoneError())
       return
     }
@@ -90,7 +90,7 @@ export function RentalsPage() {
 
     const { error: insertError } = await supabase.from('tenancies').insert({
       asset_id: form.asset_id,
-      tenant_phone: form.tenant_phone.trim(),
+      tenant_phone: normalizePhone(form.tenant_phone),
       starts_on: form.starts_on,
       ends_on: form.ends_on,
     })
@@ -146,7 +146,7 @@ export function RentalsPage() {
             {rentals.map((rental) => (
               <tr key={rental.id} className="bg-slate-950/50">
                 <td className="px-4 py-3 font-medium text-white">{rental.assets.label}</td>
-                <td className="px-4 py-3 text-slate-300">{rental.tenant_phone}</td>
+                <td className="px-4 py-3 text-slate-300">{displayPhone(rental.tenant_phone)}</td>
                 <td className="px-4 py-3 text-slate-300">{formatDate(rental.starts_on)}</td>
                 <td className="px-4 py-3 text-slate-300">{formatDate(rental.ends_on)}</td>
                 <td className="px-4 py-3">
@@ -198,10 +198,10 @@ export function RentalsPage() {
               </select>
             </label>
             <Input
-              label="Tenant phone (E.164)"
+              label="Tenant phone"
               value={form.tenant_phone}
               onChange={(event) => setForm({ ...form, tenant_phone: event.target.value })}
-              placeholder="+96170123456"
+              placeholder="79400020 or +96179400020"
             />
             <Input
               label="Start date"

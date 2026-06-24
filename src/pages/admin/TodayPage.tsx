@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, formatDateTime, todayISO } from '../../lib/dates'
+import { displayPhone } from '../../lib/phone'
 import { supabase } from '../../lib/supabase'
 import type { InvitationWithChalet, StatusCount } from '../../types/database'
 
@@ -162,7 +163,7 @@ function InvitationTable({
           {rows.map((row) => (
             <tr key={row.id} className="bg-slate-950/50">
               <td className="px-4 py-3 font-medium text-white">{row.invitee_name}</td>
-              <td className="px-4 py-3 text-slate-300">{row.invitee_phone ?? '—'}</td>
+              <td className="px-4 py-3 text-slate-300">{displayPhone(row.invitee_phone)}</td>
               <td className="px-4 py-3 text-slate-300">{row.assets.label}</td>
               <td className="px-4 py-3 text-slate-300">{formatDate(row.visit_date)}</td>
               {showValidatedAt ? (

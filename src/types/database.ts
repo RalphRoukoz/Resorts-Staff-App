@@ -1,5 +1,9 @@
 export type StaffRole = 'admin' | 'reception'
 
+export type AssetType = 'chalet' | 'cabine'
+
+export type Audience = 'chalet' | 'cabine' | 'both'
+
 export interface SuperAdmin {
   user_id: string
 }
@@ -17,9 +21,12 @@ export interface Resort {
   id: string
   name: string
   weekend_days: number[]
-  default_weekday_limit: number
-  default_weekend_limit: number
-  max_invites_per_invitee_month: number | null
+  chalet_weekday_limit: number
+  chalet_weekend_limit: number
+  cabine_weekday_limit: number
+  cabine_weekend_limit: number
+  logo_url: string | null
+  primary_color: string | null
   created_at: string
 }
 
@@ -28,6 +35,7 @@ export interface Asset {
   resort_id: string
   label: string
   owner_phone: string
+  asset_type: AssetType
   weekday_limit: number | null
   weekend_limit: number | null
   created_at: string
@@ -65,28 +73,22 @@ export interface InvitationWithChalet extends Invitation {
   assets: Pick<Asset, 'label'>
 }
 
-export interface BlockedInvitee {
-  id: string
-  resort_id: string
-  invitee_phone: string
-  reason: string | null
-  created_at: string
-}
-
-export interface InviteeActivity {
-  resort_id: string
-  invitee_phone: string
-  invites_this_month: number
-  distinct_chalets_this_month: number
-  invites_all_time: number
-  last_invited_at: string | null
-}
-
 export interface ResortStaff {
   id: string
   resort_id: string
   user_id: string
   role: StaffRole
+  username: string | null
+}
+
+export interface Announcement {
+  id: string
+  resort_id: string
+  title: string
+  body: string | null
+  pdf_url: string | null
+  audience: Audience
+  created_at: string
 }
 
 export interface ValidateSuccess {

@@ -3,14 +3,9 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
-import { emailToUsername } from '../../lib/auth'
-import { createStaffAccount } from '../../lib/edgeFunctions'
+import { createStaffAccount, resetStaffPassword } from '../../lib/edgeFunctions'
 import { supabase } from '../../lib/supabase'
 import type { Resort, ResortStaff } from '../../types/database'
-
-interface AdminRow extends ResortStaff {
-  username: string
-}
 
 interface NewCredentials {
   username: string
@@ -29,7 +24,7 @@ function generatePassword(length = 12): string {
 export function SuperResortAdminsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
   const [selectedResortId, setSelectedResortId] = useState<string>('')
-  const [admins, setAdmins] = useState<AdminRow[]>([])
+  const [admins, setAdmins] = useState<ResortStaff[]>([])
   const [loadingResorts, setLoadingResorts] = useState(true)
   const [loadingAdmins, setLoadingAdmins] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,6 +34,12 @@ export function SuperResortAdminsPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [credentials, setCredentials] = useState<NewCredentials | null>(null)
+
+  const [resetTarget, setResetTarget] = useState<ResortStaff | null>(null)
+  const [resetPasswordValue, setResetPasswordValue] = useState('')
+  const [resetError, setResetError] = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null)
 
   // Load resorts on mount
   useEffect(() => {
@@ -69,28 +70,10 @@ export function SuperResortAdminsPage() {
       .select('*')
       .eq('resort_id', resortId)
       .eq('role', 'admin')
+      .order('username')
 
-    if (fetchError) {
-      setError(fetchError.message)
-      setLoadingAdmins(false)
-      return
-    }
-
-    const rows = (data ?? []) as ResortStaff[]
-
-    // Look up username from profiles table
-    const withUsernames: AdminRow[] = await Promise.all(
-      rows.map(async (row) => {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('id', row.user_id)
-          .maybeSingle()
-        return { ...row, username: emailToUsername(profile?.email) }
-      }),
-    )
-
-    setAdmins(withUsernames)
+    if (fetchError) setError(fetchError.message)
+    else setAdmins((data ?? []) as ResortStaff[])
     setLoadingAdmins(false)
   }, [])
 
@@ -139,12 +122,44 @@ export function SuperResortAdminsPage() {
     setSaving(false)
   }
 
-  async function handleRemove(row: AdminRow) {
-    if (!confirm(`Remove admin "${row.username}" from this resort?`)) return
+  async function handleRemove(row: ResortStaff) {
+    if (!confirm(`Remove admin "${row.username ?? 'this account'}" from this resort?`)) return
 
     const { error: deleteError } = await supabase.from('resort_staff').delete().eq('id', row.id)
     if (deleteError) setError(deleteError.message)
     else if (selectedResortId) await loadAdmins(selectedResortId)
+  }
+
+  function openReset(row: ResortStaff) {
+    setResetTarget(row)
+    setResetPasswordValue(generatePassword())
+    setResetError(null)
+    setResetSuccess(null)
+  }
+
+  async function handleReset() {
+    if (!resetTarget) return
+    if (resetPasswordValue.length < 6) {
+      setResetError('Password must be at least 6 characters')
+      return
+    }
+
+    setResetting(true)
+    setResetError(null)
+
+    const result = await resetStaffPassword(resetTarget.user_id, resetPasswordValue)
+
+    if (!result.ok) {
+      setResetError(result.message)
+      setResetting(false)
+      return
+    }
+
+    setResetSuccess(
+      `Password reset for ${resetTarget.username ?? 'this admin'}. Share it now: ${resetPasswordValue}`,
+    )
+    setResetTarget(null)
+    setResetting(false)
   }
 
   if (loadingResorts) return <Spinner label="Loading resorts…" />
@@ -160,6 +175,12 @@ export function SuperResortAdminsPage() {
 
       {error ? (
         <p className="mb-4 rounded-lg bg-rose-950/50 px-3 py-2 text-sm text-rose-300">{error}</p>
+      ) : null}
+
+      {resetSuccess ? (
+        <p className="mb-4 rounded-lg bg-emerald-950/50 px-3 py-2 text-sm text-emerald-300">
+          {resetSuccess}
+        </p>
       ) : null}
 
       {/* Resort selector */}
@@ -197,11 +218,16 @@ export function SuperResortAdminsPage() {
             <tbody className="divide-y divide-slate-800">
               {admins.map((row) => (
                 <tr key={row.id} className="bg-slate-950/50">
-                  <td className="px-4 py-3 font-medium text-white">{row.username}</td>
+                  <td className="px-4 py-3 font-medium text-white">{row.username ?? '—'}</td>
                   <td className="px-4 py-3">
-                    <Button variant="danger" onClick={() => void handleRemove(row)}>
-                      Remove
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="secondary" onClick={() => openReset(row)}>
+                        Reset password
+                      </Button>
+                      <Button variant="danger" onClick={() => void handleRemove(row)}>
+                        Remove
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -256,6 +282,46 @@ export function SuperResortAdminsPage() {
               </Button>
             </div>
             {formError ? <p className="text-sm text-rose-400">{formError}</p> : null}
+          </div>
+        </Modal>
+      ) : null}
+
+      {/* Reset password modal */}
+      {resetTarget ? (
+        <Modal
+          title={`Reset password — ${resetTarget.username ?? 'admin'}`}
+          onClose={() => setResetTarget(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setResetTarget(null)}>
+                Cancel
+              </Button>
+              <Button onClick={() => void handleReset()} disabled={resetting}>
+                {resetting ? 'Resetting…' : 'Reset password'}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-slate-400">
+              Enter a new password. The old one cannot be viewed.
+            </p>
+            <div>
+              <Input
+                label="New password"
+                value={resetPasswordValue}
+                onChange={(e) => setResetPasswordValue(e.target.value)}
+                autoComplete="new-password"
+              />
+              <Button
+                variant="ghost"
+                className="mt-2"
+                onClick={() => setResetPasswordValue(generatePassword())}
+              >
+                Regenerate
+              </Button>
+            </div>
+            {resetError ? <p className="text-sm text-rose-400">{resetError}</p> : null}
           </div>
         </Modal>
       ) : null}

@@ -4,14 +4,9 @@ import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
-import { emailToUsername } from '../../lib/auth'
-import { createStaffAccount } from '../../lib/edgeFunctions'
+import { createStaffAccount, resetStaffPassword } from '../../lib/edgeFunctions'
 import { supabase } from '../../lib/supabase'
 import type { ResortStaff } from '../../types/database'
-
-interface StaffRow extends ResortStaff {
-  username: string
-}
 
 interface CredentialsModal {
   username: string
@@ -29,15 +24,22 @@ function generatePassword(length = 12): string {
 
 export function ReceptionStaffPage() {
   const { resortId } = useAuth()
-  const [staff, setStaff] = useState<StaffRow[]>([])
+  const [staff, setStaff] = useState<ResortStaff[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
   const [modalOpen, setModalOpen] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [credentials, setCredentials] = useState<CredentialsModal | null>(null)
+
+  const [resetTarget, setResetTarget] = useState<ResortStaff | null>(null)
+  const [resetPasswordValue, setResetPasswordValue] = useState('')
+  const [resetError, setResetError] = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null)
 
   const loadStaff = useCallback(async () => {
     if (!resortId) return
@@ -49,30 +51,10 @@ export function ReceptionStaffPage() {
       .select('*')
       .eq('resort_id', resortId)
       .eq('role', 'reception')
+      .order('username')
 
-    if (fetchError) {
-      setError(fetchError.message)
-      setLoading(false)
-      return
-    }
-
-    const rows = (data ?? []) as ResortStaff[]
-    const withUsernames: StaffRow[] = []
-
-    for (const row of rows) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('id', row.user_id)
-        .maybeSingle()
-
-      withUsernames.push({
-        ...row,
-        username: emailToUsername(profile?.email),
-      })
-    }
-
-    setStaff(withUsernames)
+    if (fetchError) setError(fetchError.message)
+    else setStaff((data ?? []) as ResortStaff[])
     setLoading(false)
   }, [resortId])
 
@@ -120,8 +102,40 @@ export function ReceptionStaffPage() {
     setSaving(false)
   }
 
-  async function handleRemove(row: StaffRow) {
-    if (!confirm(`Remove reception staff "${row.username}"?`)) return
+  function openReset(row: ResortStaff) {
+    setResetTarget(row)
+    setResetPasswordValue(generatePassword())
+    setResetError(null)
+    setResetSuccess(null)
+  }
+
+  async function handleReset() {
+    if (!resetTarget) return
+    if (resetPasswordValue.length < 6) {
+      setResetError('Password must be at least 6 characters')
+      return
+    }
+
+    setResetting(true)
+    setResetError(null)
+
+    const result = await resetStaffPassword(resetTarget.user_id, resetPasswordValue)
+
+    if (!result.ok) {
+      setResetError(result.message)
+      setResetting(false)
+      return
+    }
+
+    setResetSuccess(
+      `Password reset for ${resetTarget.username ?? 'this account'}. Share it now: ${resetPasswordValue}`,
+    )
+    setResetTarget(null)
+    setResetting(false)
+  }
+
+  async function handleRemove(row: ResortStaff) {
+    if (!confirm(`Remove reception staff "${row.username ?? 'this account'}"?`)) return
 
     const { error: deleteError } = await supabase.from('resort_staff').delete().eq('id', row.id)
     if (deleteError) setError(deleteError.message)
@@ -146,6 +160,12 @@ export function ReceptionStaffPage() {
         <p className="mb-4 rounded-lg bg-rose-950/50 px-3 py-2 text-sm text-rose-300">{error}</p>
       ) : null}
 
+      {resetSuccess ? (
+        <p className="mb-4 rounded-lg bg-emerald-950/50 px-3 py-2 text-sm text-emerald-300">
+          {resetSuccess}
+        </p>
+      ) : null}
+
       <div className="overflow-x-auto rounded-xl border border-slate-800">
         <table className="min-w-full text-left text-sm">
           <thead className="bg-slate-900 text-slate-400">
@@ -157,11 +177,16 @@ export function ReceptionStaffPage() {
           <tbody className="divide-y divide-slate-800">
             {staff.map((row) => (
               <tr key={row.id} className="bg-slate-950/50">
-                <td className="px-4 py-3 font-medium text-white">{row.username}</td>
+                <td className="px-4 py-3 font-medium text-white">{row.username ?? '—'}</td>
                 <td className="px-4 py-3">
-                  <Button variant="danger" onClick={() => void handleRemove(row)}>
-                    Remove
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="secondary" onClick={() => openReset(row)}>
+                      Reset password
+                    </Button>
+                    <Button variant="danger" onClick={() => void handleRemove(row)}>
+                      Remove
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -176,6 +201,7 @@ export function ReceptionStaffPage() {
         </table>
       </div>
 
+      {/* Create modal */}
       {modalOpen ? (
         <Modal
           title="Add reception staff"
@@ -218,6 +244,47 @@ export function ReceptionStaffPage() {
         </Modal>
       ) : null}
 
+      {/* Reset password modal */}
+      {resetTarget ? (
+        <Modal
+          title={`Reset password — ${resetTarget.username ?? 'account'}`}
+          onClose={() => setResetTarget(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setResetTarget(null)}>
+                Cancel
+              </Button>
+              <Button onClick={() => void handleReset()} disabled={resetting}>
+                {resetting ? 'Resetting…' : 'Reset password'}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-slate-400">
+              Enter a new password. The old one cannot be viewed.
+            </p>
+            <div>
+              <Input
+                label="New password"
+                value={resetPasswordValue}
+                onChange={(event) => setResetPasswordValue(event.target.value)}
+                autoComplete="new-password"
+              />
+              <Button
+                variant="ghost"
+                className="mt-2"
+                onClick={() => setResetPasswordValue(generatePassword())}
+              >
+                Regenerate
+              </Button>
+            </div>
+            {resetError ? <p className="text-sm text-rose-400">{resetError}</p> : null}
+          </div>
+        </Modal>
+      ) : null}
+
+      {/* New-account credentials shown once */}
       {credentials ? (
         <Modal title="Staff credentials — save now" onClose={() => setCredentials(null)}>
           <p className="mb-4 text-sm text-amber-300">

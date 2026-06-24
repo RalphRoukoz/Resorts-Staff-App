@@ -1,15 +1,25 @@
 import { Navigate } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
+import { Spinner } from '../components/ui/Spinner'
 import { useAuth } from '../context/AuthContext'
 
 export function NoAccessPage() {
   const { session, loading, hasAccess, signOut } = useAuth()
 
-  if (!loading && !session) {
+  // Never decide while the session/role check is still resolving.
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950">
+        <Spinner label="Checking access…" />
+      </div>
+    )
+  }
+
+  if (!session) {
     return <Navigate to="/login" replace />
   }
 
-  if (!loading && hasAccess) {
+  if (hasAccess) {
     return <Navigate to="/" replace />
   }
 

@@ -5,21 +5,23 @@ import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { DAY_LABELS } from '../../lib/dates'
 import { supabase } from '../../lib/supabase'
-import type { ResortWithStats } from '../../types/database'
+import type { Resort, ResortWithStats } from '../../types/database'
 
 interface ResortForm {
   name: string
-  default_weekday_limit: string
-  default_weekend_limit: string
-  max_invites_per_invitee_month: string
+  chalet_weekday_limit: string
+  chalet_weekend_limit: string
+  cabine_weekday_limit: string
+  cabine_weekend_limit: string
   weekend_days: number[]
 }
 
 const emptyForm: ResortForm = {
   name: '',
-  default_weekday_limit: '8',
-  default_weekend_limit: '3',
-  max_invites_per_invitee_month: '',
+  chalet_weekday_limit: '8',
+  chalet_weekend_limit: '3',
+  cabine_weekday_limit: '8',
+  cabine_weekend_limit: '3',
   weekend_days: [5, 6],
 }
 
@@ -43,67 +45,38 @@ export function SuperResortsPage() {
     setLoading(true)
     setError(null)
 
-    // Fetch resorts with counts via aggregation
     const { data, error: fetchError } = await supabase
       .from('resorts')
-      .select('*, assets(count), invitations:assets(invitations(count))')
+      .select('*')
       .order('name')
 
     if (fetchError) {
-      // Fallback: fetch resorts plain and compute counts separately
-      const { data: plainData, error: plainError } = await supabase
-        .from('resorts')
-        .select('*')
-        .order('name')
-
-      if (plainError) {
-        setError(plainError.message)
-        setLoading(false)
-        return
-      }
-
-      const withStats: ResortWithStats[] = await Promise.all(
-        (plainData ?? []).map(async (resort) => {
-          const [{ count: chaletsCount }, { count: invitesCount }] = await Promise.all([
-            supabase
-              .from('assets')
-              .select('*', { count: 'exact', head: true })
-              .eq('resort_id', resort.id)
-              .then((r) => ({ count: r.count ?? 0 })),
-            supabase
-              .from('invitations')
-              .select('*, assets!inner(resort_id)', { count: 'exact', head: true })
-              .eq('assets.resort_id', resort.id)
-              .then((r) => ({ count: r.count ?? 0 })),
-          ])
-          return { ...resort, chalet_count: chaletsCount, invitation_count: invitesCount }
-        }),
-      )
-
-      setResorts(withStats)
-    } else {
-      // Parse nested counts from Supabase response
-      const withStats: ResortWithStats[] = (data ?? []).map((row: Record<string, unknown>) => {
-        const assetArr = Array.isArray(row.assets) ? row.assets : []
-        const chaletsCount = assetArr.length > 0 && typeof assetArr[0] === 'object' && assetArr[0] !== null && 'count' in assetArr[0]
-          ? Number((assetArr[0] as { count: unknown }).count)
-          : assetArr.length
-
-        return {
-          id: row.id as string,
-          name: row.name as string,
-          weekend_days: row.weekend_days as number[],
-          default_weekday_limit: row.default_weekday_limit as number,
-          default_weekend_limit: row.default_weekend_limit as number,
-          max_invites_per_invitee_month: row.max_invites_per_invitee_month as number | null,
-          created_at: row.created_at as string,
-          chalet_count: chaletsCount,
-          invitation_count: 0,
-        }
-      })
-      setResorts(withStats)
+      setError(fetchError.message)
+      setLoading(false)
+      return
     }
 
+    const withStats: ResortWithStats[] = await Promise.all(
+      ((data ?? []) as Resort[]).map(async (resort) => {
+        const [chaletsResult, invitesResult] = await Promise.all([
+          supabase
+            .from('assets')
+            .select('*', { count: 'exact', head: true })
+            .eq('resort_id', resort.id),
+          supabase
+            .from('invitations')
+            .select('*, assets!inner(resort_id)', { count: 'exact', head: true })
+            .eq('assets.resort_id', resort.id),
+        ])
+        return {
+          ...resort,
+          chalet_count: chaletsResult.count ?? 0,
+          invitation_count: invitesResult.count ?? 0,
+        }
+      }),
+    )
+
+    setResorts(withStats)
     setLoading(false)
   }, [])
 
@@ -122,12 +95,10 @@ export function SuperResortsPage() {
     setEditingId(resort.id)
     setForm({
       name: resort.name,
-      default_weekday_limit: String(resort.default_weekday_limit),
-      default_weekend_limit: String(resort.default_weekend_limit),
-      max_invites_per_invitee_month:
-        resort.max_invites_per_invitee_month != null
-          ? String(resort.max_invites_per_invitee_month)
-          : '',
+      chalet_weekday_limit: String(resort.chalet_weekday_limit),
+      chalet_weekend_limit: String(resort.chalet_weekend_limit),
+      cabine_weekday_limit: String(resort.cabine_weekday_limit),
+      cabine_weekend_limit: String(resort.cabine_weekend_limit),
       weekend_days: [...resort.weekend_days],
     })
     setFormError(null)
@@ -139,21 +110,16 @@ export function SuperResortsPage() {
       setFormError('Name is required')
       return
     }
-    if (!form.default_weekday_limit || !form.default_weekend_limit) {
-      setFormError('Weekday and weekend limits are required')
-      return
-    }
 
     setSaving(true)
     setFormError(null)
 
     const payload = {
       name: form.name.trim(),
-      default_weekday_limit: Number(form.default_weekday_limit),
-      default_weekend_limit: Number(form.default_weekend_limit),
-      max_invites_per_invitee_month: form.max_invites_per_invitee_month
-        ? Number(form.max_invites_per_invitee_month)
-        : null,
+      chalet_weekday_limit: Number(form.chalet_weekday_limit),
+      chalet_weekend_limit: Number(form.chalet_weekend_limit),
+      cabine_weekday_limit: Number(form.cabine_weekday_limit),
+      cabine_weekend_limit: Number(form.cabine_weekend_limit),
       weekend_days: form.weekend_days,
     }
 
@@ -162,11 +128,18 @@ export function SuperResortsPage() {
         .from('resorts')
         .update(payload)
         .eq('id', editingId)
-
-      if (updateError) { setFormError(updateError.message); setSaving(false); return }
+      if (updateError) {
+        setFormError(updateError.message)
+        setSaving(false)
+        return
+      }
     } else {
       const { error: insertError } = await supabase.from('resorts').insert(payload)
-      if (insertError) { setFormError(insertError.message); setSaving(false); return }
+      if (insertError) {
+        setFormError(insertError.message)
+        setSaving(false)
+        return
+      }
     }
 
     setModalOpen(false)
@@ -212,10 +185,10 @@ export function SuperResortsPage() {
           <thead className="bg-slate-900 text-slate-400">
             <tr>
               <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Chalets</th>
+              <th className="px-4 py-3 font-medium">Units</th>
               <th className="px-4 py-3 font-medium">Invitations</th>
-              <th className="px-4 py-3 font-medium">Wkday limit</th>
-              <th className="px-4 py-3 font-medium">Wkend limit</th>
+              <th className="px-4 py-3 font-medium">Chalet (wd/we)</th>
+              <th className="px-4 py-3 font-medium">Cabine (wd/we)</th>
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
@@ -225,8 +198,12 @@ export function SuperResortsPage() {
                 <td className="px-4 py-3 font-medium text-white">{resort.name}</td>
                 <td className="px-4 py-3 text-slate-300">{resort.chalet_count}</td>
                 <td className="px-4 py-3 text-slate-300">{resort.invitation_count}</td>
-                <td className="px-4 py-3 text-slate-300">{resort.default_weekday_limit}</td>
-                <td className="px-4 py-3 text-slate-300">{resort.default_weekend_limit}</td>
+                <td className="px-4 py-3 text-slate-300">
+                  {resort.chalet_weekday_limit} / {resort.chalet_weekend_limit}
+                </td>
+                <td className="px-4 py-3 text-slate-300">
+                  {resort.cabine_weekday_limit} / {resort.cabine_weekend_limit}
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
                     <Button variant="secondary" onClick={() => openEdit(resort)}>
@@ -272,29 +249,36 @@ export function SuperResortsPage() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
-            <Input
-              label="Default weekday limit"
-              type="number"
-              min={0}
-              value={form.default_weekday_limit}
-              onChange={(e) => setForm({ ...form, default_weekday_limit: e.target.value })}
-            />
-            <Input
-              label="Default weekend limit"
-              type="number"
-              min={0}
-              value={form.default_weekend_limit}
-              onChange={(e) => setForm({ ...form, default_weekend_limit: e.target.value })}
-            />
-            <Input
-              label="Max invites per invitee per month (blank = no cap)"
-              type="number"
-              min={0}
-              value={form.max_invites_per_invitee_month}
-              onChange={(e) =>
-                setForm({ ...form, max_invites_per_invitee_month: e.target.value })
-              }
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Chalet weekday limit"
+                type="number"
+                min={0}
+                value={form.chalet_weekday_limit}
+                onChange={(e) => setForm({ ...form, chalet_weekday_limit: e.target.value })}
+              />
+              <Input
+                label="Chalet weekend limit"
+                type="number"
+                min={0}
+                value={form.chalet_weekend_limit}
+                onChange={(e) => setForm({ ...form, chalet_weekend_limit: e.target.value })}
+              />
+              <Input
+                label="Cabine weekday limit"
+                type="number"
+                min={0}
+                value={form.cabine_weekday_limit}
+                onChange={(e) => setForm({ ...form, cabine_weekday_limit: e.target.value })}
+              />
+              <Input
+                label="Cabine weekend limit"
+                type="number"
+                min={0}
+                value={form.cabine_weekend_limit}
+                onChange={(e) => setForm({ ...form, cabine_weekend_limit: e.target.value })}
+              />
+            </div>
             <fieldset>
               <legend className="mb-2 text-sm font-medium text-slate-300">Weekend days</legend>
               <div className="flex flex-wrap gap-2">
@@ -342,8 +326,8 @@ export function SuperResortsPage() {
           </p>
           <p className="mt-3 rounded-lg bg-rose-950/50 px-3 py-2 text-sm text-rose-300">
             This will permanently delete the resort and cascade-delete{' '}
-            <strong>all its chalets, rentals, invitations, staff, and blocklist entries</strong>.
-            This cannot be undone.
+            <strong>all its units, rentals, invitations, staff, and announcements</strong>. This
+            cannot be undone.
           </p>
         </Modal>
       ) : null}

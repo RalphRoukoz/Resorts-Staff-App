@@ -52,3 +52,47 @@ export async function createStaffAccount(
 
   return { ok: true }
 }
+
+const RESET_ERROR_MESSAGES: Record<string, string> = {
+  BAD_INPUT: 'Password must be at least 6 characters.',
+  NOT_AUTHENTICATED: 'Your session expired — please sign in again.',
+  FORBIDDEN: 'You do not have permission to reset this account.',
+  METHOD_NOT_ALLOWED: 'Unexpected request method.',
+}
+
+/**
+ * Calls reset-staff-password. Passwords can only be set, never read back.
+ * Returns { ok: true } or { ok: false, message: string }.
+ */
+export async function resetStaffPassword(
+  staffUserId: string,
+  newPassword: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { data, error } = await supabase.functions.invoke('reset-staff-password', {
+    body: { staff_user_id: staffUserId, new_password: newPassword },
+  })
+
+  if (error) {
+    let bodyError: string | undefined
+    try {
+      const ctx = (error as { context?: Response }).context
+      if (ctx?.json) {
+        const parsed = (await ctx.json()) as { error?: string }
+        bodyError = parsed.error
+      }
+    } catch {
+      // ignore parse failure
+    }
+
+    const code = bodyError ?? ''
+    const message = RESET_ERROR_MESSAGES[code] ?? bodyError ?? error.message
+    return { ok: false, message }
+  }
+
+  if (data && typeof data === 'object' && 'error' in data) {
+    const code = String((data as { error: string }).error)
+    return { ok: false, message: RESET_ERROR_MESSAGES[code] ?? code }
+  }
+
+  return { ok: true }
+}

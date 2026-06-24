@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Html5Qrcode } from 'html5-qrcode'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
-import { formatDate } from '../../lib/dates'
+import { formatDate, formatDateTime } from '../../lib/dates'
 import { supabase } from '../../lib/supabase'
 import { extractInvitationToken } from '../../lib/token'
 import type { ValidateResult } from '../../types/database'
@@ -216,7 +216,7 @@ function FailureMessage({ result }: { result: Extract<ValidateResult, { ok: fals
       return (
         <>
           <p className="text-2xl font-semibold">Already used</p>
-          {result.validated_at ? <p>Validated: {result.validated_at}</p> : null}
+          {result.validated_at ? <p>Validated: {formatDateTime(result.validated_at)}</p> : null}
           {result.invitee ? <p>{result.invitee}</p> : null}
           {result.chalet ? <p>{result.chalet}</p> : null}
         </>

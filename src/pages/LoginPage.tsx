@@ -11,6 +11,8 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  // While the session/role check is resolving, keep showing the form (with its
+  // submitting state) rather than redirecting prematurely.
   if (!loading && session && hasAccess) {
     return <Navigate to="/" replace />
   }

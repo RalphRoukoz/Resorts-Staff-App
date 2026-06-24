@@ -40,6 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [staffRows, setStaffRows] = useState<ResortStaff[]>([])
   const [resort, setResort] = useState<Resort | null>(null)
   const [loading, setLoading] = useState(true)
+  // True while the async role/access check is in flight. Used to prevent the
+  // "no access" screen from flashing before the check resolves.
+  const [rolesLoading, setRolesLoading] = useState(false)
   const [view, setView] = useState<AppView>('admin')
 
   const loadResort = useCallback(async (resortId: string) => {
@@ -55,42 +58,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUserRoles = useCallback(
     async (userId: string) => {
-      // Priority 1: check super_admins first
-      const { data: superAdminRow } = await supabase
-        .from('super_admins')
-        .select('user_id')
-        .eq('user_id', userId)
-        .maybeSingle()
+      setRolesLoading(true)
+      try {
+        // Priority 1: check super_admins first
+        const { data: superAdminRow } = await supabase
+          .from('super_admins')
+          .select('user_id')
+          .eq('user_id', userId)
+          .maybeSingle()
 
-      if (superAdminRow) {
-        setIsSuperAdmin(true)
-        setStaffRows([])
-        setResort(null)
-        return
+        if (superAdminRow) {
+          setIsSuperAdmin(true)
+          setStaffRows([])
+          setResort(null)
+          return
+        }
+
+        setIsSuperAdmin(false)
+
+        // Priority 2: check resort_staff
+        const { data, error } = await supabase
+          .from('resort_staff')
+          .select('*')
+          .eq('user_id', userId)
+
+        if (error) throw error
+
+        const rows = (data ?? []) as ResortStaff[]
+        setStaffRows(rows)
+
+        const hasAdminRole = rows.some((row) => row.role === 'admin')
+        const hasReceptionRole = rows.some((row) => row.role === 'reception')
+
+        if (hasAdminRole) setView('admin')
+        else if (hasReceptionRole) setView('reception')
+
+        const resortId = rows[0]?.resort_id
+        if (resortId) await loadResort(resortId)
+        else setResort(null)
+      } finally {
+        setRolesLoading(false)
       }
-
-      setIsSuperAdmin(false)
-
-      // Priority 2: check resort_staff
-      const { data, error } = await supabase
-        .from('resort_staff')
-        .select('*')
-        .eq('user_id', userId)
-
-      if (error) throw error
-
-      const rows = (data ?? []) as ResortStaff[]
-      setStaffRows(rows)
-
-      const hasAdminRole = rows.some((row) => row.role === 'admin')
-      const hasReceptionRole = rows.some((row) => row.role === 'reception')
-
-      if (hasAdminRole) setView('admin')
-      else if (hasReceptionRole) setView('reception')
-
-      const resortId = rows[0]?.resort_id
-      if (resortId) await loadResort(resortId)
-      else setResort(null)
     },
     [loadResort],
   )
@@ -133,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsSuperAdmin(false)
         setStaffRows([])
         setResort(null)
+        setRolesLoading(false)
       }
     })
 
@@ -160,6 +169,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasReception = staffRows.some((row) => row.role === 'reception')
   const hasAccess = isSuperAdmin || staffRows.length > 0
   const resortId = staffRows[0]?.resort_id ?? null
+  // Treat the app as "loading" during initial session restore AND while the
+  // role/access check is running, so routing never decides before it resolves.
+  const isLoading = loading || rolesLoading
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -168,7 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       staffRows,
       resort,
       resortId,
-      loading,
+      loading: isLoading,
       hasAdmin,
       hasReception,
       hasAccess,
@@ -185,7 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       staffRows,
       resort,
       resortId,
-      loading,
+      isLoading,
       hasAdmin,
       hasReception,
       hasAccess,
