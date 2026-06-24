@@ -20,7 +20,7 @@ import { todayISO } from '../../lib/dates'
 import { supabase } from '../../lib/supabase'
 import type { Asset, DayType } from '../../types/database'
 
-const DEFAULT_BRAND = '#0ea5e9'
+const DEFAULT_BRAND = '#1A1A1A'
 const WEEKEND_COLOR = '#f59e0b'
 
 interface VisitRow {
@@ -154,25 +154,26 @@ export function AnalyticsPage() {
 
   if (loading) return <Spinner label="Loading analytics…" />
 
-  const axisProps = { stroke: '#64748b', fontSize: 12 }
+  const axisProps = { stroke: '#9ca3af', fontSize: 12 }
   const tooltipStyle = {
-    backgroundColor: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: 8,
-    color: '#e2e8f0',
+    backgroundColor: '#ffffff',
+    border: '1px solid #ECECEC',
+    borderRadius: 12,
+    color: '#1A1A1A',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
   }
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-white">Analytics</h2>
-          <p className="mt-1 text-sm text-slate-400">Validated visits across this resort.</p>
+          <h2 className="text-2xl font-semibold text-[#1A1A1A]">Analytics</h2>
+          <p className="mt-1 text-sm text-gray-500">Validated visits across this resort.</p>
         </div>
         <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-slate-300">Unit</span>
+          <span className="mb-1.5 block text-sm font-medium text-gray-700">Unit</span>
           <select
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-slate-100"
+            className="rounded-xl border border-[#ECECEC] bg-white px-3.5 py-2.5 text-[#1A1A1A] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
             value={unitFilter}
             onChange={(e) => setUnitFilter(e.target.value)}
           >
@@ -187,11 +188,11 @@ export function AnalyticsPage() {
       </div>
 
       {error ? (
-        <p className="rounded-lg bg-rose-950/50 px-3 py-2 text-sm text-rose-300">{error}</p>
+        <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       ) : null}
 
       {rows.length === 0 ? (
-        <p className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-12 text-center text-slate-500">
+        <p className="rounded-2xl border border-[#ECECEC] bg-white px-4 py-12 text-center text-gray-400 shadow-sm">
           No validated visits yet.
         </p>
       ) : (
@@ -199,10 +200,10 @@ export function AnalyticsPage() {
           <ChartCard title="Visits per month">
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" {...axisProps} />
                 <YAxis allowDecimals={false} {...axisProps} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: '#1e293b55' }} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: '#00000008' }} />
                 <Bar dataKey="visits" fill={brand} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -211,7 +212,7 @@ export function AnalyticsPage() {
           <ChartCard title="Visits per day (this month)">
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={dailyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="day" {...axisProps} />
                 <YAxis allowDecimals={false} {...axisProps} />
                 <Tooltip contentStyle={tooltipStyle} />
@@ -229,10 +230,10 @@ export function AnalyticsPage() {
           <ChartCard title="Visits by unit">
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={byUnitData} layout="vertical" margin={{ left: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis type="number" allowDecimals={false} {...axisProps} />
                 <YAxis type="category" dataKey="label" width={100} {...axisProps} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: '#1e293b55' }} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: '#00000008' }} />
                 <Bar dataKey="visits" fill={brand} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -266,8 +267,8 @@ export function AnalyticsPage() {
 
 function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
-      <h3 className="mb-4 text-sm font-medium text-slate-300">{title}</h3>
+    <div className="rounded-2xl border border-[#ECECEC] bg-white p-5 shadow-sm">
+      <h3 className="mb-4 text-sm font-medium text-gray-700">{title}</h3>
       {children}
     </div>
   )

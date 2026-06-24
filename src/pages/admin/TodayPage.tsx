@@ -87,18 +87,18 @@ export function TodayPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-semibold text-white">Today &amp; Consumption</h2>
-        <p className="mt-1 text-sm text-slate-400">
+        <h2 className="text-2xl font-semibold text-[#1A1A1A]">Today &amp; Consumption</h2>
+        <p className="mt-1 text-sm text-gray-500">
           Expected arrivals, check-ins, and this month&apos;s invitation counts.
         </p>
       </div>
 
       {error ? (
-        <p className="rounded-lg bg-rose-950/50 px-3 py-2 text-sm text-rose-300">{error}</p>
+        <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       ) : null}
 
       <section>
-        <h3 className="mb-3 text-lg font-medium text-white">Expected today</h3>
+        <h3 className="mb-3 text-lg font-medium text-[#1A1A1A]">Expected today</h3>
         <InvitationTable
           rows={expected}
           emptyMessage="No issued invitations for today."
@@ -107,7 +107,7 @@ export function TodayPage() {
       </section>
 
       <section>
-        <h3 className="mb-3 text-lg font-medium text-white">Checked in today</h3>
+        <h3 className="mb-3 text-lg font-medium text-[#1A1A1A]">Checked in today</h3>
         <InvitationTable
           rows={checkedIn}
           emptyMessage="No check-ins yet today."
@@ -116,19 +116,19 @@ export function TodayPage() {
       </section>
 
       <section>
-        <h3 className="mb-3 text-lg font-medium text-white">This month by status</h3>
+        <h3 className="mb-3 text-lg font-medium text-[#1A1A1A]">This month by status</h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {statusCounts.map((item) => (
             <div
               key={item.status}
-              className="rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-5"
+              className="rounded-2xl border border-[#ECECEC] bg-white px-5 py-5 shadow-sm"
             >
-              <p className="text-sm capitalize text-slate-400">{item.status}</p>
-              <p className="mt-1 text-3xl font-semibold text-white">{item.count}</p>
+              <p className="text-sm capitalize text-gray-500">{item.status}</p>
+              <p className="mt-1 text-3xl font-semibold text-[#1A1A1A]">{item.count}</p>
             </div>
           ))}
           {statusCounts.length === 0 ? (
-            <p className="text-slate-500">No invitations this month.</p>
+            <p className="text-gray-400">No invitations this month.</p>
           ) : null}
         </div>
       </section>
@@ -146,9 +146,9 @@ function InvitationTable({
   showValidatedAt: boolean
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-800">
+    <div className="overflow-x-auto rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
       <table className="min-w-full text-left text-sm">
-        <thead className="bg-slate-900 text-slate-400">
+        <thead className="bg-[#FAFAFA] text-gray-500">
           <tr>
             <th className="px-4 py-3 font-medium">Invitee</th>
             <th className="px-4 py-3 font-medium">Phone</th>
@@ -159,15 +159,15 @@ function InvitationTable({
             ) : null}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800">
+        <tbody className="divide-y divide-gray-100">
           {rows.map((row) => (
-            <tr key={row.id} className="bg-slate-950/50">
-              <td className="px-4 py-3 font-medium text-white">{row.invitee_name}</td>
-              <td className="px-4 py-3 text-slate-300">{displayPhone(row.invitee_phone)}</td>
-              <td className="px-4 py-3 text-slate-300">{row.assets.label}</td>
-              <td className="px-4 py-3 text-slate-300">{formatDate(row.visit_date)}</td>
+            <tr key={row.id} className="transition hover:bg-gray-50">
+              <td className="px-4 py-3 font-medium text-[#1A1A1A]">{row.invitee_name}</td>
+              <td className="px-4 py-3 text-gray-600">{displayPhone(row.invitee_phone)}</td>
+              <td className="px-4 py-3 text-gray-600">{row.assets.label}</td>
+              <td className="px-4 py-3 text-gray-600">{formatDate(row.visit_date)}</td>
               {showValidatedAt ? (
-                <td className="px-4 py-3 text-slate-300">
+                <td className="px-4 py-3 text-gray-600">
                   {row.validated_at ? formatDateTime(row.validated_at) : '—'}
                 </td>
               ) : null}
@@ -177,7 +177,7 @@ function InvitationTable({
             <tr>
               <td
                 colSpan={showValidatedAt ? 5 : 4}
-                className="px-4 py-8 text-center text-slate-500"
+                className="px-4 py-10 text-center text-gray-400"
               >
                 {emptyMessage}
               </td>

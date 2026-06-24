@@ -4,6 +4,7 @@ import { Html5Qrcode } from 'html5-qrcode'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, formatDateTime } from '../../lib/dates'
+import { playError, playSuccess, primeAudio } from '../../lib/sound'
 import { supabase } from '../../lib/supabase'
 import { extractInvitationToken } from '../../lib/token'
 import type { ValidateResult } from '../../types/database'
@@ -47,12 +48,15 @@ export function ReceptionScanner() {
         p_token: token,
       })
 
-      if (error) {
-        setResult({ ok: false, reason: error.message })
-      } else {
-        setResult(data as ValidateResult)
-      }
+      const finalResult: ValidateResult = error
+        ? { ok: false, reason: error.message }
+        : (data as ValidateResult)
 
+      // Audio feedback so the receptionist doesn't need to watch the screen.
+      if (finalResult.ok) playSuccess()
+      else playError()
+
+      setResult(finalResult)
       setPhase('result')
       setProcessing(false)
       processingRef.current = false
@@ -65,6 +69,7 @@ export function ReceptionScanner() {
     setResult(null)
     setPhase('scanning')
     processingRef.current = false
+    primeAudio()
 
     await stopScanner()
 
@@ -99,12 +104,13 @@ export function ReceptionScanner() {
   }, [startScanner, stopScanner])
 
   function scanNext() {
+    primeAudio()
     void startScanner()
   }
 
   function backToAdmin() {
     setView('admin')
-    navigate('/admin/chalets')
+    navigate('/admin/units')
   }
 
   if (phase === 'result' && result) {
@@ -138,7 +144,7 @@ export function ReceptionScanner() {
         <div className="space-y-3 p-4 pb-8">
           <Button
             fullWidth
-            className="!bg-white !py-4 !text-lg !font-bold !text-slate-900 hover:!bg-slate-100"
+            className="!bg-white !py-4 !text-lg !font-bold !text-[#1A1A1A] hover:!bg-gray-100"
             onClick={scanNext}
           >
             Scan next
@@ -168,14 +174,14 @@ export function ReceptionScanner() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-950">
-      <header className="flex items-center justify-between px-4 py-3">
-        <p className="text-sm font-medium text-sky-400">Reception scanner</p>
+    <div className="flex min-h-screen flex-col bg-[#FAFAFA]">
+      <header className="flex items-center justify-between border-b border-[#ECECEC] bg-white px-4 py-3">
+        <p className="text-sm font-semibold text-[#1A1A1A]">Reception scanner</p>
         {hasAdmin ? (
           <button
             type="button"
             onClick={backToAdmin}
-            className="text-sm text-slate-400 hover:text-white"
+            className="text-sm text-gray-500 hover:text-[#1A1A1A]"
           >
             Admin
           </button>
@@ -183,27 +189,27 @@ export function ReceptionScanner() {
           <button
             type="button"
             onClick={() => void signOut()}
-            className="text-sm text-slate-400 hover:text-white"
+            className="text-sm text-gray-500 hover:text-[#1A1A1A]"
           >
             Sign out
           </button>
         )}
       </header>
 
-      <div className="flex flex-1 flex-col items-center justify-center px-4 pb-8">
+      <div className="flex flex-1 flex-col items-center justify-center px-4 pb-8 pt-6">
         {processing ? (
-          <p className="mb-4 text-lg text-white">Validating…</p>
+          <p className="mb-4 text-lg font-medium text-[#1A1A1A]">Validating…</p>
         ) : (
-          <p className="mb-4 text-center text-slate-400">Point camera at invitation QR code</p>
+          <p className="mb-4 text-center text-gray-500">Point camera at invitation QR code</p>
         )}
 
         <div
           id="qr-reader"
-          className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-700"
+          className="w-full max-w-md overflow-hidden rounded-2xl border border-[#ECECEC] bg-white shadow-sm"
         />
 
         {cameraError ? (
-          <p className="mt-4 max-w-md text-center text-sm text-rose-400">{cameraError}</p>
+          <p className="mt-4 max-w-md text-center text-sm text-red-600">{cameraError}</p>
         ) : null}
       </div>
     </div>

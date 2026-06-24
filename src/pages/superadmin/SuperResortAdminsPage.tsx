@@ -167,18 +167,18 @@ export function SuperResortAdminsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-white">Resort admins</h2>
-        <p className="mt-1 text-sm text-slate-400">
+        <h2 className="text-2xl font-semibold text-[#1A1A1A]">Resort admins</h2>
+        <p className="mt-1 text-sm text-gray-500">
           Manage admin credentials for each resort.
         </p>
       </div>
 
       {error ? (
-        <p className="mb-4 rounded-lg bg-rose-950/50 px-3 py-2 text-sm text-rose-300">{error}</p>
+        <p className="mb-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       ) : null}
 
       {resetSuccess ? (
-        <p className="mb-4 rounded-lg bg-emerald-950/50 px-3 py-2 text-sm text-emerald-300">
+        <p className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           {resetSuccess}
         </p>
       ) : null}
@@ -186,9 +186,9 @@ export function SuperResortAdminsPage() {
       {/* Resort selector */}
       <div className="mb-6 flex flex-wrap items-end gap-4">
         <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-slate-300">Resort</span>
+          <span className="mb-1.5 block text-sm font-medium text-gray-700">Resort</span>
           <select
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-slate-100"
+            className="rounded-xl border border-[#ECECEC] bg-white px-3.5 py-2.5 text-[#1A1A1A] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
             value={selectedResortId}
             onChange={(e) => setSelectedResortId(e.target.value)}
           >
@@ -207,18 +207,18 @@ export function SuperResortAdminsPage() {
       {loadingAdmins ? (
         <Spinner label="Loading admins…" />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-800">
+        <div className="overflow-x-auto rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
           <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-900 text-slate-400">
+            <thead className="bg-[#FAFAFA] text-gray-500">
               <tr>
                 <th className="px-4 py-3 font-medium">Username</th>
                 <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-gray-100">
               {admins.map((row) => (
-                <tr key={row.id} className="bg-slate-950/50">
-                  <td className="px-4 py-3 font-medium text-white">{row.username ?? '—'}</td>
+                <tr key={row.id} className="transition hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-[#1A1A1A]">{row.username ?? '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <Button variant="secondary" onClick={() => openReset(row)}>
@@ -233,7 +233,7 @@ export function SuperResortAdminsPage() {
               ))}
               {admins.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={2} className="px-4 py-10 text-center text-gray-400">
                     No admins for this resort yet.
                   </td>
                 </tr>
@@ -281,7 +281,7 @@ export function SuperResortAdminsPage() {
                 Regenerate
               </Button>
             </div>
-            {formError ? <p className="text-sm text-rose-400">{formError}</p> : null}
+            {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
           </div>
         </Modal>
       ) : null}
@@ -303,7 +303,7 @@ export function SuperResortAdminsPage() {
           }
         >
           <div className="space-y-4">
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-gray-500">
               Enter a new password. The old one cannot be viewed.
             </p>
             <div>
@@ -321,7 +321,7 @@ export function SuperResortAdminsPage() {
                 Regenerate
               </Button>
             </div>
-            {resetError ? <p className="text-sm text-rose-400">{resetError}</p> : null}
+            {resetError ? <p className="text-sm text-red-600">{resetError}</p> : null}
           </div>
         </Modal>
       ) : null}
@@ -329,17 +329,17 @@ export function SuperResortAdminsPage() {
       {/* Show credentials once */}
       {credentials ? (
         <Modal title="Admin credentials — save now" onClose={() => setCredentials(null)}>
-          <p className="mb-4 text-sm text-amber-300">
+          <p className="mb-4 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-700">
             These credentials are shown once. Copy them before closing.
           </p>
-          <div className="space-y-3 rounded-lg bg-slate-950 p-4 font-mono text-sm">
+          <div className="space-y-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] p-4 font-mono text-sm">
             <p>
-              <span className="text-slate-500">Username: </span>
-              <span className="text-white">{credentials.username}</span>
+              <span className="text-gray-400">Username: </span>
+              <span className="text-[#1A1A1A]">{credentials.username}</span>
             </p>
             <p>
-              <span className="text-slate-500">Password: </span>
-              <span className="text-white">{credentials.password}</span>
+              <span className="text-gray-400">Password: </span>
+              <span className="text-[#1A1A1A]">{credentials.password}</span>
             </p>
           </div>
         </Modal>

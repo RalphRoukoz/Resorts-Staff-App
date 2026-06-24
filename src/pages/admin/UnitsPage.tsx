@@ -157,19 +157,19 @@ export function UnitsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-white">Chalets &amp; Cabines</h2>
-          <p className="mt-1 text-sm text-slate-400">Manage units, types, and invite limits.</p>
+          <h2 className="text-2xl font-semibold text-[#1A1A1A]">Chalets &amp; Cabines</h2>
+          <p className="mt-1 text-sm text-gray-500">Manage units, types, and invite limits.</p>
         </div>
         <Button onClick={openCreate}>Add unit</Button>
       </div>
 
       {error ? (
-        <p className="mb-4 rounded-lg bg-rose-950/50 px-3 py-2 text-sm text-rose-300">{error}</p>
+        <p className="mb-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-xl border border-slate-800">
+      <div className="overflow-x-auto rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-900 text-slate-400">
+          <thead className="bg-[#FAFAFA] text-gray-500">
             <tr>
               <th className="px-4 py-3 font-medium">Label</th>
               <th className="px-4 py-3 font-medium">Type</th>
@@ -179,26 +179,26 @@ export function UnitsPage() {
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800">
+          <tbody className="divide-y divide-gray-100">
             {units.map((unit) => (
-              <tr key={unit.id} className="bg-slate-950/50">
-                <td className="px-4 py-3 font-medium text-white">{unit.label}</td>
+              <tr key={unit.id} className="transition hover:bg-gray-50">
+                <td className="px-4 py-3 font-medium text-[#1A1A1A]">{unit.label}</td>
                 <td className="px-4 py-3">
                   <span
                     className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
                       unit.asset_type === 'chalet'
-                        ? 'bg-sky-600/20 text-sky-300'
-                        : 'bg-amber-600/20 text-amber-300'
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'bg-amber-50 text-amber-700'
                     }`}
                   >
                     {unit.asset_type}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-slate-300">{displayPhone(unit.owner_phone)}</td>
-                <td className="px-4 py-3 text-slate-300">
+                <td className="px-4 py-3 text-gray-600">{displayPhone(unit.owner_phone)}</td>
+                <td className="px-4 py-3 text-gray-600">
                   {limitLabel(unit.weekday_limit, resort, unit.asset_type, 'weekday')}
                 </td>
-                <td className="px-4 py-3 text-slate-300">
+                <td className="px-4 py-3 text-gray-600">
                   {limitLabel(unit.weekend_limit, resort, unit.asset_type, 'weekend')}
                 </td>
                 <td className="px-4 py-3">
@@ -215,7 +215,7 @@ export function UnitsPage() {
             ))}
             {units.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
                   No units yet.
                 </td>
               </tr>
@@ -246,9 +246,9 @@ export function UnitsPage() {
               onChange={(event) => setForm({ ...form, label: event.target.value })}
             />
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-300">Type</span>
+              <span className="mb-1.5 block text-sm font-medium text-gray-700">Type</span>
               <select
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-slate-100"
+                className="w-full rounded-xl border border-[#ECECEC] bg-white px-3.5 py-2.5 text-[#1A1A1A] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
                 value={form.asset_type}
                 onChange={(event) =>
                   setForm({ ...form, asset_type: event.target.value as AssetType })
@@ -278,7 +278,7 @@ export function UnitsPage() {
               value={form.weekend_limit}
               onChange={(event) => setForm({ ...form, weekend_limit: event.target.value })}
             />
-            {formError ? <p className="text-sm text-rose-400">{formError}</p> : null}
+            {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
           </div>
         </Modal>
       ) : null}

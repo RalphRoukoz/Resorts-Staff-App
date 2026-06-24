@@ -1,5 +1,10 @@
 @import 'tailwindcss';
 
+:root {
+  /* Single accent color, overridden per-context (resort branding / super-admin teal). */
+  --accent: #1a1a1a;
+}
+
 html,
 body,
 #root {
@@ -8,5 +13,8 @@ body,
 
 body {
   margin: 0;
-  background-color: #020617;
+  background-color: #fafafa;
+  color: #1a1a1a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

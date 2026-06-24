@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
@@ -7,6 +7,9 @@ import { DAY_LABELS } from '../../lib/dates'
 import { supabase } from '../../lib/supabase'
 import type { Resort, ResortWithStats } from '../../types/database'
 
+const DEFAULT_ACCENT = '#1A1A1A'
+const LOGO_BUCKET = 'resort-logos'
+
 interface ResortForm {
   name: string
   chalet_weekday_limit: string
@@ -14,6 +17,8 @@ interface ResortForm {
   cabine_weekday_limit: string
   cabine_weekend_limit: string
   weekend_days: number[]
+  primary_color: string
+  logo_url: string | null
 }
 
 const emptyForm: ResortForm = {
@@ -23,6 +28,8 @@ const emptyForm: ResortForm = {
   cabine_weekday_limit: '8',
   cabine_weekend_limit: '3',
   weekend_days: [5, 6],
+  primary_color: DEFAULT_ACCENT,
+  logo_url: null,
 }
 
 function toggleDay(days: number[], day: number): number[] {
@@ -36,10 +43,23 @@ export function SuperResortsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<ResortForm>(emptyForm)
+  const [logoFile, setLogoFile] = useState<File | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<ResortWithStats | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const logoPreview = useMemo(
+    () => (logoFile ? URL.createObjectURL(logoFile) : form.logo_url),
+    [logoFile, form.logo_url],
+  )
+
+  useEffect(() => {
+    return () => {
+      if (logoFile && logoPreview) URL.revokeObjectURL(logoPreview)
+    }
+  }, [logoFile, logoPreview])
 
   const loadResorts = useCallback(async () => {
     setLoading(true)
@@ -87,7 +107,9 @@ export function SuperResortsPage() {
   function openCreate() {
     setEditingId(null)
     setForm(emptyForm)
+    setLogoFile(null)
     setFormError(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
     setModalOpen(true)
   }
 
@@ -100,8 +122,12 @@ export function SuperResortsPage() {
       cabine_weekday_limit: String(resort.cabine_weekday_limit),
       cabine_weekend_limit: String(resort.cabine_weekend_limit),
       weekend_days: [...resort.weekend_days],
+      primary_color: resort.primary_color || DEFAULT_ACCENT,
+      logo_url: resort.logo_url,
     })
+    setLogoFile(null)
     setFormError(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
     setModalOpen(true)
   }
 
@@ -114,6 +140,26 @@ export function SuperResortsPage() {
     setSaving(true)
     setFormError(null)
 
+    let nextLogoUrl = form.logo_url
+
+    if (logoFile) {
+      const ext = logoFile.name.split('.').pop() || 'png'
+      const folder = editingId ?? 'new'
+      const path = `${folder}/logo-${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from(LOGO_BUCKET)
+        .upload(path, logoFile, { upsert: false, contentType: logoFile.type })
+
+      if (uploadError) {
+        setFormError(`Logo upload failed: ${uploadError.message}`)
+        setSaving(false)
+        return
+      }
+
+      const { data: publicData } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path)
+      nextLogoUrl = publicData.publicUrl
+    }
+
     const payload = {
       name: form.name.trim(),
       chalet_weekday_limit: Number(form.chalet_weekday_limit),
@@ -121,6 +167,8 @@ export function SuperResortsPage() {
       cabine_weekday_limit: Number(form.cabine_weekday_limit),
       cabine_weekend_limit: Number(form.cabine_weekend_limit),
       weekend_days: form.weekend_days,
+      primary_color: form.primary_color,
+      logo_url: nextLogoUrl,
     }
 
     if (editingId) {
@@ -170,21 +218,21 @@ export function SuperResortsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-white">Resorts</h2>
-          <p className="mt-1 text-sm text-slate-400">All resorts on the platform.</p>
+          <h2 className="text-2xl font-semibold text-[#1A1A1A]">Resorts</h2>
+          <p className="mt-1 text-sm text-gray-500">All resorts on the platform.</p>
         </div>
         <Button onClick={openCreate}>Add resort</Button>
       </div>
 
       {error ? (
-        <p className="mb-4 rounded-lg bg-rose-950/50 px-3 py-2 text-sm text-rose-300">{error}</p>
+        <p className="mb-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-xl border border-slate-800">
+      <div className="overflow-x-auto rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-900 text-slate-400">
+          <thead className="bg-[#FAFAFA] text-gray-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Name</th>
+              <th className="px-4 py-3 font-medium">Resort</th>
               <th className="px-4 py-3 font-medium">Units</th>
               <th className="px-4 py-3 font-medium">Invitations</th>
               <th className="px-4 py-3 font-medium">Chalet (wd/we)</th>
@@ -192,16 +240,32 @@ export function SuperResortsPage() {
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800">
+          <tbody className="divide-y divide-gray-100">
             {resorts.map((resort) => (
-              <tr key={resort.id} className="bg-slate-950/50">
-                <td className="px-4 py-3 font-medium text-white">{resort.name}</td>
-                <td className="px-4 py-3 text-slate-300">{resort.chalet_count}</td>
-                <td className="px-4 py-3 text-slate-300">{resort.invitation_count}</td>
-                <td className="px-4 py-3 text-slate-300">
+              <tr key={resort.id} className="transition hover:bg-gray-50">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    {resort.logo_url ? (
+                      <img
+                        src={resort.logo_url}
+                        alt={resort.name}
+                        className="h-8 w-8 rounded-lg border border-[#ECECEC] object-contain"
+                      />
+                    ) : (
+                      <span
+                        className="inline-block h-8 w-8 rounded-lg border border-[#ECECEC]"
+                        style={{ backgroundColor: resort.primary_color || DEFAULT_ACCENT }}
+                      />
+                    )}
+                    <span className="font-medium text-[#1A1A1A]">{resort.name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-gray-600">{resort.chalet_count}</td>
+                <td className="px-4 py-3 text-gray-600">{resort.invitation_count}</td>
+                <td className="px-4 py-3 text-gray-600">
                   {resort.chalet_weekday_limit} / {resort.chalet_weekend_limit}
                 </td>
-                <td className="px-4 py-3 text-slate-300">
+                <td className="px-4 py-3 text-gray-600">
                   {resort.cabine_weekday_limit} / {resort.cabine_weekend_limit}
                 </td>
                 <td className="px-4 py-3">
@@ -218,7 +282,7 @@ export function SuperResortsPage() {
             ))}
             {resorts.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
                   No resorts yet.
                 </td>
               </tr>
@@ -243,7 +307,7 @@ export function SuperResortsPage() {
             </>
           }
         >
-          <div className="space-y-4">
+          <div className="space-y-5">
             <Input
               label="Resort name"
               value={form.name}
@@ -279,28 +343,110 @@ export function SuperResortsPage() {
                 onChange={(e) => setForm({ ...form, cabine_weekend_limit: e.target.value })}
               />
             </div>
+
             <fieldset>
-              <legend className="mb-2 text-sm font-medium text-slate-300">Weekend days</legend>
+              <legend className="mb-2 text-sm font-medium text-gray-700">Weekend days</legend>
               <div className="flex flex-wrap gap-2">
-                {DAY_LABELS.map((label, day) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() =>
-                      setForm({ ...form, weekend_days: toggleDay(form.weekend_days, day) })
-                    }
-                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                      form.weekend_days.includes(day)
-                        ? 'bg-violet-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
+                {DAY_LABELS.map((label, day) => {
+                  const active = form.weekend_days.includes(day)
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() =>
+                        setForm({ ...form, weekend_days: toggleDay(form.weekend_days, day) })
+                      }
+                      style={active ? { backgroundColor: 'var(--accent)' } : undefined}
+                      className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+                        active ? 'text-white' : 'bg-gray-100 text-gray-500 hover:text-[#1A1A1A]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
               </div>
             </fieldset>
-            {formError ? <p className="text-sm text-rose-400">{formError}</p> : null}
+
+            {/* Branding */}
+            <div className="space-y-4 rounded-2xl border border-[#ECECEC] bg-[#FAFAFA] p-4">
+              <p className="text-sm font-semibold text-[#1A1A1A]">Branding</p>
+
+              <div>
+                <span className="mb-1.5 block text-sm font-medium text-gray-700">Logo</span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+                  className="block text-sm text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#1A1A1A] file:shadow-sm hover:file:bg-gray-50"
+                />
+              </div>
+
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-gray-700">Primary color</span>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={form.primary_color}
+                    onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+                    className="h-10 w-14 cursor-pointer rounded-lg border border-[#ECECEC] bg-white"
+                  />
+                  <input
+                    type="text"
+                    value={form.primary_color}
+                    onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+                    className="w-32 rounded-xl border border-[#ECECEC] bg-white px-3 py-2.5 font-mono text-[#1A1A1A] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
+                  />
+                </div>
+              </label>
+
+              {/* Live preview */}
+              <div>
+                <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-gray-400">
+                  Dashboard preview
+                </span>
+                <div className="overflow-hidden rounded-xl border border-[#ECECEC]">
+                  <div className="flex items-center gap-2 border-b border-[#ECECEC] bg-white px-4 py-3">
+                    {logoPreview ? (
+                      <img
+                        src={logoPreview}
+                        alt="Logo preview"
+                        className="h-7 w-auto max-w-[120px] object-contain"
+                      />
+                    ) : (
+                      <span
+                        className="text-xs font-semibold uppercase tracking-widest"
+                        style={{ color: form.primary_color }}
+                      >
+                        {form.name || 'Resort'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-3 bg-[#FAFAFA] px-4 py-4">
+                    <div
+                      className="inline-flex rounded-lg px-2.5 py-1 text-xs font-medium"
+                      style={{
+                        color: form.primary_color,
+                        backgroundColor: `${form.primary_color}14`,
+                      }}
+                    >
+                      Active tab
+                    </div>
+                    <div>
+                      <span
+                        className="inline-flex rounded-xl px-4 py-2 text-sm font-medium text-white"
+                        style={{ backgroundColor: form.primary_color }}
+                      >
+                        Primary button
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
           </div>
         </Modal>
       ) : null}
@@ -321,10 +467,10 @@ export function SuperResortsPage() {
             </>
           }
         >
-          <p className="text-slate-300">
-            Delete <span className="font-semibold text-white">{deleteTarget.name}</span>?
+          <p className="text-gray-600">
+            Delete <span className="font-semibold text-[#1A1A1A]">{deleteTarget.name}</span>?
           </p>
-          <p className="mt-3 rounded-lg bg-rose-950/50 px-3 py-2 text-sm text-rose-300">
+          <p className="mt-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
             This will permanently delete the resort and cascade-delete{' '}
             <strong>all its units, rentals, invitations, staff, and announcements</strong>. This
             cannot be undone.

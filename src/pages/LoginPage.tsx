@@ -36,13 +36,13 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-xl">
-        <p className="text-sm font-medium uppercase tracking-widest text-sky-400">
+    <div className="flex min-h-screen items-center justify-center bg-[#FAFAFA] px-4">
+      <div className="w-full max-w-md rounded-2xl border border-[#ECECEC] bg-white p-8 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
           Staff Portal
         </p>
-        <h1 className="mt-2 text-2xl font-semibold text-white">Sign in</h1>
-        <p className="mt-2 text-sm text-slate-400">
+        <h1 className="mt-2 text-2xl font-semibold text-[#1A1A1A]">Sign in</h1>
+        <p className="mt-2 text-sm text-gray-500">
           Enter your staff username and password.
         </p>
 
@@ -64,7 +64,7 @@ export function LoginPage() {
           />
 
           {error ? (
-            <p className="rounded-lg bg-rose-950/50 px-3 py-2 text-sm text-rose-300">
+            <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
               {error}
             </p>
           ) : null}

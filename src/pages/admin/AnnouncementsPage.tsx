@@ -127,40 +127,40 @@ export function AnnouncementsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-white">Announcements</h2>
-          <p className="mt-1 text-sm text-slate-400">Compose notices for chalets and cabines.</p>
+          <h2 className="text-2xl font-semibold text-[#1A1A1A]">Announcements</h2>
+          <p className="mt-1 text-sm text-gray-500">Compose notices for chalets and cabines.</p>
         </div>
         <Button onClick={openCreate}>New announcement</Button>
       </div>
 
       {error ? (
-        <p className="mb-4 rounded-lg bg-rose-950/50 px-3 py-2 text-sm text-rose-300">{error}</p>
+        <p className="mb-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       ) : null}
 
       <div className="space-y-3">
         {announcements.map((item) => (
           <div
             key={item.id}
-            className="rounded-xl border border-slate-800 bg-slate-900/40 p-5"
+            className="rounded-2xl border border-[#ECECEC] bg-white p-5 shadow-sm"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-medium text-white">{item.title}</h3>
-                  <span className="inline-flex rounded-full bg-slate-700/50 px-2.5 py-0.5 text-xs font-medium text-slate-300">
+                  <h3 className="text-lg font-medium text-[#1A1A1A]">{item.title}</h3>
+                  <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
                     {audienceLabels[item.audience]}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.created_at)}</p>
+                <p className="mt-1 text-xs text-gray-400">{formatDateTime(item.created_at)}</p>
                 {item.body ? (
-                  <p className="mt-3 whitespace-pre-wrap text-sm text-slate-300">{item.body}</p>
+                  <p className="mt-3 whitespace-pre-wrap text-sm text-gray-600">{item.body}</p>
                 ) : null}
                 {item.pdf_url ? (
                   <a
                     href={item.pdf_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center gap-1 text-sm text-sky-400 hover:text-sky-300"
+                    className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[var(--accent)] hover:opacity-80"
                   >
                     View attachment (PDF)
                   </a>
@@ -173,7 +173,7 @@ export function AnnouncementsPage() {
           </div>
         ))}
         {announcements.length === 0 ? (
-          <p className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-12 text-center text-slate-500">
+          <p className="rounded-2xl border border-[#ECECEC] bg-white px-4 py-12 text-center text-gray-400 shadow-sm">
             No announcements yet.
           </p>
         ) : null}
@@ -201,18 +201,18 @@ export function AnnouncementsPage() {
               onChange={(e) => setTitle(e.target.value)}
             />
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-300">Body (optional)</span>
+              <span className="mb-1.5 block text-sm font-medium text-gray-700">Body (optional)</span>
               <textarea
                 rows={4}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full rounded-xl border border-[#ECECEC] bg-white px-3.5 py-2.5 text-[#1A1A1A] placeholder:text-gray-400 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
               />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-300">Audience</span>
+              <span className="mb-1.5 block text-sm font-medium text-gray-700">Audience</span>
               <select
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-slate-100"
+                className="w-full rounded-xl border border-[#ECECEC] bg-white px-3.5 py-2.5 text-[#1A1A1A] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
                 value={audience}
                 onChange={(e) => setAudience(e.target.value as Audience)}
               >
@@ -222,7 +222,7 @@ export function AnnouncementsPage() {
               </select>
             </label>
             <div>
-              <span className="mb-1.5 block text-sm font-medium text-slate-300">
+              <span className="mb-1.5 block text-sm font-medium text-gray-700">
                 PDF attachment (optional)
               </span>
               <input
@@ -230,10 +230,10 @@ export function AnnouncementsPage() {
                 type="file"
                 accept="application/pdf"
                 onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
-                className="block text-sm text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-100 hover:file:bg-slate-600"
+                className="block text-sm text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#1A1A1A] hover:file:bg-gray-200"
               />
             </div>
-            {formError ? <p className="text-sm text-rose-400">{formError}</p> : null}
+            {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
           </div>
         </Modal>
       ) : null}

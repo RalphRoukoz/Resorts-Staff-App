@@ -117,8 +117,8 @@ export function RentalsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-white">Rentals</h2>
-          <p className="mt-1 text-sm text-slate-400">
+          <h2 className="text-2xl font-semibold text-[#1A1A1A]">Rentals</h2>
+          <p className="mt-1 text-sm text-gray-500">
             Current and upcoming tenancies. Control transfers automatically on create.
           </p>
         </div>
@@ -128,12 +128,12 @@ export function RentalsPage() {
       </div>
 
       {error ? (
-        <p className="mb-4 rounded-lg bg-rose-950/50 px-3 py-2 text-sm text-rose-300">{error}</p>
+        <p className="mb-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-xl border border-slate-800">
+      <div className="overflow-x-auto rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-900 text-slate-400">
+          <thead className="bg-[#FAFAFA] text-gray-500">
             <tr>
               <th className="px-4 py-3 font-medium">Chalet</th>
               <th className="px-4 py-3 font-medium">Tenant phone</th>
@@ -142,13 +142,13 @@ export function RentalsPage() {
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800">
+          <tbody className="divide-y divide-gray-100">
             {rentals.map((rental) => (
-              <tr key={rental.id} className="bg-slate-950/50">
-                <td className="px-4 py-3 font-medium text-white">{rental.assets.label}</td>
-                <td className="px-4 py-3 text-slate-300">{displayPhone(rental.tenant_phone)}</td>
-                <td className="px-4 py-3 text-slate-300">{formatDate(rental.starts_on)}</td>
-                <td className="px-4 py-3 text-slate-300">{formatDate(rental.ends_on)}</td>
+              <tr key={rental.id} className="transition hover:bg-gray-50">
+                <td className="px-4 py-3 font-medium text-[#1A1A1A]">{rental.assets.label}</td>
+                <td className="px-4 py-3 text-gray-600">{displayPhone(rental.tenant_phone)}</td>
+                <td className="px-4 py-3 text-gray-600">{formatDate(rental.starts_on)}</td>
+                <td className="px-4 py-3 text-gray-600">{formatDate(rental.ends_on)}</td>
                 <td className="px-4 py-3">
                   <Button variant="danger" onClick={() => void handleDelete(rental)}>
                     Delete
@@ -158,7 +158,7 @@ export function RentalsPage() {
             ))}
             {rentals.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={5} className="px-4 py-10 text-center text-gray-400">
                   No current or upcoming rentals.
                 </td>
               </tr>
@@ -184,9 +184,9 @@ export function RentalsPage() {
         >
           <div className="space-y-4">
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-300">Chalet</span>
+              <span className="mb-1.5 block text-sm font-medium text-gray-700">Chalet</span>
               <select
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-slate-100"
+                className="w-full rounded-xl border border-[#ECECEC] bg-white px-3.5 py-2.5 text-[#1A1A1A] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
                 value={form.asset_id}
                 onChange={(event) => setForm({ ...form, asset_id: event.target.value })}
               >
@@ -215,7 +215,7 @@ export function RentalsPage() {
               value={form.ends_on}
               onChange={(event) => setForm({ ...form, ends_on: event.target.value })}
             />
-            {formError ? <p className="text-sm text-rose-400">{formError}</p> : null}
+            {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
           </div>
         </Modal>
       ) : null}
