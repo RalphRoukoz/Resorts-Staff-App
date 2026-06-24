@@ -60,7 +60,7 @@ export function ResortConfigPage() {
       const path = `${resort.id}/logo-${Date.now()}.${ext}`
       const { error: uploadError } = await supabase.storage
         .from(LOGO_BUCKET)
-        .upload(path, logoFile, { upsert: true, contentType: logoFile.type })
+        .upload(path, logoFile, { upsert: false, contentType: logoFile.type })
 
       if (uploadError) {
         setError(`Logo upload failed: ${uploadError.message}`)

@@ -78,7 +78,7 @@ export function AnnouncementsPage() {
       const path = `${resortId}/${Date.now()}-${safeName}`
       const { error: uploadError } = await supabase.storage
         .from(FILES_BUCKET)
-        .upload(path, pdfFile, { upsert: true, contentType: pdfFile.type || 'application/pdf' })
+        .upload(path, pdfFile, { upsert: false, contentType: pdfFile.type || 'application/pdf' })
 
       if (uploadError) {
         setFormError(`PDF upload failed: ${uploadError.message}`)
