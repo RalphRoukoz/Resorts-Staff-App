@@ -40,9 +40,7 @@ export function isValidPhone(input: string): boolean {
   return /^\d{8,15}$/.test(normalizePhone(input))
 }
 
-export function formatPhoneError(): string {
-  return 'Enter a valid phone number (e.g. 79 400 020 or +961 79 400 020)'
-}
+export const PHONE_ERROR = 'Enter a valid phone number (e.g. 79 400 020 or +961 79 400 020)'
 
 /** Display a stored phone (no "+") as a readable international number. */
 export function displayPhone(stored: string | null | undefined): string {

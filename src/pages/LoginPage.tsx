@@ -41,7 +41,7 @@ export function LoginPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
           Staff Portal
         </p>
-        <h1 className="mt-2 text-2xl font-semibold text-[#1A1A1A]">Sign in</h1>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#1A1A1A]">Sign in</h1>
         <p className="mt-2 text-sm text-gray-500">
           Enter your staff username and password.
         </p>

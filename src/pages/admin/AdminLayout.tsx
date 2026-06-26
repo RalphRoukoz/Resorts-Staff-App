@@ -32,8 +32,8 @@ export function AdminLayout() {
   }
 
   const desktopNavClass = ({ isActive }: { isActive: boolean }) =>
-    `block rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-      isActive ? '' : 'text-gray-500 hover:bg-gray-100 hover:text-[#1A1A1A]'
+    `block rounded-lg px-3 py-2.5 text-sm font-medium tracking-tight transition duration-200 ${
+      isActive ? '' : 'text-gray-500 hover:bg-gray-50 hover:text-[#1A1A1A]'
     }`
 
   function BrandMark({ compact = false }: { compact?: boolean }) {
@@ -59,11 +59,11 @@ export function AdminLayout() {
   return (
     <div style={rootStyle} className="flex min-h-screen bg-[#FAFAFA] text-[#1A1A1A]">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-[#ECECEC] bg-white lg:flex">
-        <div className="border-b border-[#ECECEC] px-5 py-6">
+        <div className="border-b border-[#ECECEC] px-5 py-7">
           <BrandMark />
         </div>
 
-        <nav className="flex-1 space-y-1 p-3">
+        <nav className="flex-1 space-y-0.5 p-3">
           {navItems.map((item) => (
             <NavLink key={item.to} to={item.to} className={desktopNavClass} style={navLinkStyle}>
               {item.label}
@@ -104,7 +104,7 @@ export function AdminLayout() {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium ${
+                `whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium tracking-tight transition ${
                   isActive ? '' : 'text-gray-500'
                 }`
               }
@@ -115,8 +115,10 @@ export function AdminLayout() {
           ))}
         </nav>
 
-        <main className="flex-1 overflow-auto p-4 lg:p-8">
-          <Outlet />
+        <main className="flex-1 overflow-auto">
+          <div className="mx-auto w-full max-w-6xl p-4 lg:p-10">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

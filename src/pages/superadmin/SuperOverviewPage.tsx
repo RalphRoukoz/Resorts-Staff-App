@@ -12,9 +12,9 @@ interface PlatformStats {
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-[#ECECEC] bg-white px-6 py-6 shadow-sm">
-      <p className="text-sm font-medium text-gray-500">{label}</p>
-      <p className="mt-2 text-4xl font-semibold tracking-tight text-[#1A1A1A]">{value}</p>
+    <div className="rounded-2xl border border-[#ECECEC] bg-white px-6 py-6 shadow-sm transition duration-200 hover:shadow-md">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">{label}</p>
+      <p className="tnum mt-2 text-4xl font-semibold tracking-tight text-[#1A1A1A]">{value}</p>
     </div>
   )
 }
@@ -75,7 +75,7 @@ export function SuperOverviewPage() {
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-[#1A1A1A]">Overview</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">Overview</h2>
         <p className="mt-1 text-sm text-gray-500">Platform-wide totals.</p>
       </div>
 

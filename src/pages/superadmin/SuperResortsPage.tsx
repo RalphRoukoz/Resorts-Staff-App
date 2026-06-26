@@ -218,7 +218,7 @@ export function SuperResortsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-[#1A1A1A]">Resorts</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">Resorts</h2>
           <p className="mt-1 text-sm text-gray-500">All resorts on the platform.</p>
         </div>
         <Button onClick={openCreate}>Add resort</Button>
@@ -230,7 +230,7 @@ export function SuperResortsPage() {
 
       <div className="overflow-x-auto rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-[#FAFAFA] text-gray-500">
+          <thead className="bg-[#FAFAFA] text-[11px] uppercase tracking-wider text-gray-400">
             <tr>
               <th className="px-4 py-3 font-medium">Resort</th>
               <th className="px-4 py-3 font-medium">Units</th>

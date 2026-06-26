@@ -68,7 +68,7 @@ export function ResortConfigPage() {
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-[#1A1A1A]">Resort Configuration</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">Resort Configuration</h2>
         <p className="mt-1 text-sm text-gray-500">
           Invite limits and weekend days for {resort.name}.
         </p>

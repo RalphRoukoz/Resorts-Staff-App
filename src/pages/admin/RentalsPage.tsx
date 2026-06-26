@@ -5,7 +5,7 @@ import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, todayISO } from '../../lib/dates'
-import { displayPhone, formatPhoneError, isValidPhone, normalizePhone } from '../../lib/phone'
+import { displayPhone, PHONE_ERROR, isValidPhone, normalizePhone } from '../../lib/phone'
 import { supabase } from '../../lib/supabase'
 import type { Asset, TenancyWithAsset } from '../../types/database'
 
@@ -77,7 +77,7 @@ export function RentalsPage() {
       return
     }
     if (!isValidPhone(form.tenant_phone)) {
-      setFormError(formatPhoneError())
+      setFormError(PHONE_ERROR)
       return
     }
     if (form.ends_on < form.starts_on) {
@@ -117,7 +117,7 @@ export function RentalsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-[#1A1A1A]">Rentals</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">Rentals</h2>
           <p className="mt-1 text-sm text-gray-500">
             Current and upcoming tenancies. Control transfers automatically on create.
           </p>
@@ -133,7 +133,7 @@ export function RentalsPage() {
 
       <div className="overflow-x-auto rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-[#FAFAFA] text-gray-500">
+          <thead className="bg-[#FAFAFA] text-[11px] uppercase tracking-wider text-gray-400">
             <tr>
               <th className="px-4 py-3 font-medium">Chalet</th>
               <th className="px-4 py-3 font-medium">Tenant phone</th>

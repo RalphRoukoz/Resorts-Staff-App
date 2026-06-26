@@ -1,8 +1,24 @@
 @import 'tailwindcss';
 
+@theme {
+  /* Typeface with character — replaces browser/Inter defaults. */
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', 'JetBrains Mono', monospace;
+
+  /* Ultra-diffuse, low-opacity shadows (tinted to the charcoal base). */
+  --shadow-2xs: 0 1px 2px rgba(17, 17, 17, 0.03);
+  --shadow-xs: 0 1px 2px rgba(17, 17, 17, 0.04);
+  --shadow-sm: 0 1px 2px rgba(17, 17, 17, 0.03), 0 10px 24px -18px rgba(17, 17, 17, 0.12);
+  --shadow-md: 0 2px 6px rgba(17, 17, 17, 0.04), 0 14px 32px -18px rgba(17, 17, 17, 0.16);
+}
+
 :root {
   /* Single accent color, overridden per-context (resort branding / super-admin teal). */
   --accent: #1a1a1a;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 html,
@@ -15,6 +31,24 @@ body {
   margin: 0;
   background-color: #fafafa;
   color: #1a1a1a;
+  font-family: var(--font-sans);
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Data-dense numerics line up cleanly. */
+table,
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background-color: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Visible keyboard focus (accessibility). */
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 2px;
 }

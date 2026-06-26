@@ -4,7 +4,7 @@ import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
-import { displayPhone, formatPhoneError, isValidPhone, normalizePhone } from '../../lib/phone'
+import { displayPhone, PHONE_ERROR, isValidPhone, normalizePhone } from '../../lib/phone'
 import { supabase } from '../../lib/supabase'
 import type { Asset, AssetType, Resort } from '../../types/database'
 
@@ -101,7 +101,7 @@ export function UnitsPage() {
       return
     }
     if (!isValidPhone(form.owner_phone)) {
-      setFormError(formatPhoneError())
+      setFormError(PHONE_ERROR)
       return
     }
 
@@ -157,7 +157,7 @@ export function UnitsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-[#1A1A1A]">Chalets &amp; Cabines</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">Chalets &amp; Cabines</h2>
           <p className="mt-1 text-sm text-gray-500">Manage units, types, and invite limits.</p>
         </div>
         <Button onClick={openCreate}>Add unit</Button>
@@ -169,7 +169,7 @@ export function UnitsPage() {
 
       <div className="overflow-x-auto rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-[#FAFAFA] text-gray-500">
+          <thead className="bg-[#FAFAFA] text-[11px] uppercase tracking-wider text-gray-400">
             <tr>
               <th className="px-4 py-3 font-medium">Label</th>
               <th className="px-4 py-3 font-medium">Type</th>
@@ -185,20 +185,20 @@ export function UnitsPage() {
                 <td className="px-4 py-3 font-medium text-[#1A1A1A]">{unit.label}</td>
                 <td className="px-4 py-3">
                   <span
-                    className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                    className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wider ${
                       unit.asset_type === 'chalet'
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'bg-amber-50 text-amber-700'
+                        ? 'bg-[#E1F3FE] text-[#1F6C9F]'
+                        : 'bg-[#FBF3DB] text-[#956400]'
                     }`}
                   >
                     {unit.asset_type}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-gray-600">{displayPhone(unit.owner_phone)}</td>
-                <td className="px-4 py-3 text-gray-600">
+                <td className="tnum px-4 py-3 text-gray-600">{displayPhone(unit.owner_phone)}</td>
+                <td className="tnum px-4 py-3 text-gray-600">
                   {limitLabel(unit.weekday_limit, resort, unit.asset_type, 'weekday')}
                 </td>
-                <td className="px-4 py-3 text-gray-600">
+                <td className="tnum px-4 py-3 text-gray-600">
                   {limitLabel(unit.weekend_limit, resort, unit.asset_type, 'weekend')}
                 </td>
                 <td className="px-4 py-3">

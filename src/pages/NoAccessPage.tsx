@@ -26,7 +26,7 @@ export function NoAccessPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#FAFAFA] px-4 text-center">
       <div className="max-w-md rounded-2xl border border-[#ECECEC] bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-[#1A1A1A]">No staff access</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">No staff access</h1>
         <p className="mt-3 text-gray-500">
           Your account is signed in but is not linked to any resort staff role.
           Contact your resort administrator.

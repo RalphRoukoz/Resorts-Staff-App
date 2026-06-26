@@ -87,7 +87,7 @@ export function TodayPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-semibold text-[#1A1A1A]">Today &amp; Consumption</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">Today &amp; Consumption</h2>
         <p className="mt-1 text-sm text-gray-500">
           Expected arrivals, check-ins, and this month&apos;s invitation counts.
         </p>
@@ -121,10 +121,10 @@ export function TodayPage() {
           {statusCounts.map((item) => (
             <div
               key={item.status}
-              className="rounded-2xl border border-[#ECECEC] bg-white px-5 py-5 shadow-sm"
+              className="rounded-2xl border border-[#ECECEC] bg-white px-5 py-5 shadow-sm transition duration-200 hover:shadow-md"
             >
-              <p className="text-sm capitalize text-gray-500">{item.status}</p>
-              <p className="mt-1 text-3xl font-semibold text-[#1A1A1A]">{item.count}</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">{item.status}</p>
+              <p className="tnum mt-2 text-3xl font-semibold tracking-tight text-[#1A1A1A]">{item.count}</p>
             </div>
           ))}
           {statusCounts.length === 0 ? (
@@ -148,7 +148,7 @@ function InvitationTable({
   return (
     <div className="overflow-x-auto rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
       <table className="min-w-full text-left text-sm">
-        <thead className="bg-[#FAFAFA] text-gray-500">
+        <thead className="bg-[#FAFAFA] text-[11px] uppercase tracking-wider text-gray-400">
           <tr>
             <th className="px-4 py-3 font-medium">Invitee</th>
             <th className="px-4 py-3 font-medium">Phone</th>

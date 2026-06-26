@@ -127,7 +127,7 @@ export function AnnouncementsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-[#1A1A1A]">Announcements</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">Announcements</h2>
           <p className="mt-1 text-sm text-gray-500">Compose notices for chalets and cabines.</p>
         </div>
         <Button onClick={openCreate}>New announcement</Button>

@@ -16,7 +16,7 @@ import {
 } from 'recharts'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
-import { todayISO } from '../../lib/dates'
+import { beirutYMD, monthLabel, todayISO } from '../../lib/dates'
 import { supabase } from '../../lib/supabase'
 import type { Asset, DayType } from '../../types/database'
 
@@ -28,24 +28,6 @@ interface VisitRow {
   day_type: DayType
   asset_id: string
   label: string
-}
-
-/** YYYY-MM-DD for a timestamp, in Asia/Beirut. */
-function beirutYMD(iso: string): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Beirut',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(iso))
-}
-
-function monthLabel(ym: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Asia/Beirut',
-  }).format(new Date(`${ym}-01T12:00:00Z`))
 }
 
 export function AnalyticsPage() {
@@ -167,7 +149,7 @@ export function AnalyticsPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-[#1A1A1A]">Analytics</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">Analytics</h2>
           <p className="mt-1 text-sm text-gray-500">Validated visits across this resort.</p>
         </div>
         <label className="block">

@@ -29,7 +29,6 @@ interface AuthContextValue {
   signIn: (username: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   refreshResort: () => Promise<void>
-  refreshStaff: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -108,10 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (resortId) await loadResort(resortId)
   }, [loadResort, staffRows])
 
-  const refreshStaff = useCallback(async () => {
-    if (session?.user.id) await loadUserRoles(session.user.id)
-  }, [loadUserRoles, session?.user.id])
-
   useEffect(() => {
     let mounted = true
 
@@ -189,7 +184,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signOut,
       refreshResort,
-      refreshStaff,
     }),
     [
       session,
@@ -205,7 +199,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signOut,
       refreshResort,
-      refreshStaff,
     ],
   )
 

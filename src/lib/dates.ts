@@ -9,6 +9,25 @@ export function todayISO(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE }).format(new Date())
 }
 
+/** YYYY-MM-DD for a timestamp, in Asia/Beirut. */
+export function beirutYMD(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(iso))
+}
+
+/** Format a YYYY-MM month key as a short "Mon YYYY" label, in Asia/Beirut. */
+export function monthLabel(ym: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    year: 'numeric',
+    timeZone: TIME_ZONE,
+  }).format(new Date(`${ym}-01T12:00:00Z`))
+}
+
 /** Format a date-only (YYYY-MM-DD) or timestamp as a Beirut calendar date. */
 export function formatDate(iso: string): string {
   const date = iso.length <= 10 ? new Date(`${iso}T12:00:00Z`) : new Date(iso)
