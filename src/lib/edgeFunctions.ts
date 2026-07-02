@@ -3,7 +3,7 @@ import { supabase } from './supabase'
 export type StaffAccountPayload = {
   username: string
   password: string
-  role: 'admin' | 'reception'
+  role: 'admin' | 'reception' | 'viewer'
   resort_id: string
 }
 

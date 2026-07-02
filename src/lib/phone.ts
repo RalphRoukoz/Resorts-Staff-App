@@ -42,8 +42,26 @@ export function isValidPhone(input: string): boolean {
 
 export const PHONE_ERROR = 'Enter a valid phone number (e.g. 79 400 020 or +961 79 400 020)'
 
+export function parsePhoneList(input: string): string[] {
+  const seen = new Set<string>()
+
+  return input
+    .split(/[\n,;]/)
+    .map((value) => normalizePhone(value))
+    .filter((value) => {
+      if (!value || seen.has(value)) return false
+      seen.add(value)
+      return true
+    })
+}
+
 /** Display a stored phone (no "+") as a readable international number. */
 export function displayPhone(stored: string | null | undefined): string {
   if (!stored) return '—'
   return stored.startsWith('+') ? stored : `+${stored}`
+}
+
+export function displayPhoneList(stored: string[] | null | undefined): string {
+  if (!stored?.length) return '—'
+  return stored.map((value) => displayPhone(value)).join(', ')
 }

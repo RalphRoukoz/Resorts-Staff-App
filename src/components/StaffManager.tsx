@@ -7,7 +7,7 @@ import { createStaffAccount, resetStaffPassword } from '../lib/edgeFunctions'
 import { supabase } from '../lib/supabase'
 import type { ResortStaff } from '../types/database'
 
-type Role = 'admin' | 'reception'
+type Role = 'admin' | 'reception' | 'viewer'
 
 interface Copy {
   heading: string
@@ -40,6 +40,16 @@ const COPY: Record<Role, Copy> = {
     emptyLabel: 'No admins for this resort yet.',
     loadingLabel: 'Loading admins…',
     removeNoun: 'admin',
+  },
+  viewer: {
+    heading: 'Dashboard viewers',
+    subheading: 'Read-only resort accounts — managed here by resort admins only.',
+    addLabel: 'Add viewer',
+    createModalTitle: 'Add dashboard viewer',
+    credentialsTitle: 'Viewer credentials — save now',
+    emptyLabel: 'No dashboard viewers yet.',
+    loadingLabel: 'Loading viewers…',
+    removeNoun: 'viewer',
   },
 }
 

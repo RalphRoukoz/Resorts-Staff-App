@@ -12,7 +12,7 @@ import type { ValidateResult } from '../../types/database'
 type ScannerPhase = 'scanning' | 'result'
 
 export function ReceptionScanner() {
-  const { signOut, hasAdmin, setView } = useAuth()
+  const { signOut, hasDashboard, setView } = useAuth()
   const navigate = useNavigate()
   const [phase, setPhase] = useState<ScannerPhase>('scanning')
   const [result, setResult] = useState<ValidateResult | null>(null)
@@ -149,14 +149,14 @@ export function ReceptionScanner() {
           >
             Scan next
           </Button>
-          {hasAdmin ? (
+          {hasDashboard ? (
             <Button
               fullWidth
               variant="ghost"
               className="!text-white hover:!bg-white/10"
               onClick={backToAdmin}
             >
-              Back to admin
+              Back to dashboard
             </Button>
           ) : (
             <Button
@@ -177,13 +177,13 @@ export function ReceptionScanner() {
     <div className="flex min-h-screen flex-col bg-[#FAFAFA]">
       <header className="flex items-center justify-between border-b border-[#ECECEC] bg-white px-4 py-3">
         <p className="text-sm font-semibold text-[#1A1A1A]">Reception scanner</p>
-        {hasAdmin ? (
+        {hasDashboard ? (
           <button
             type="button"
             onClick={backToAdmin}
             className="text-sm text-gray-500 hover:text-[#1A1A1A]"
           >
-            Admin
+            Dashboard
           </button>
         ) : (
           <button

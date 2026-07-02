@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { UnitSearchSelect } from '../../components/UnitSearchSelect'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
@@ -7,7 +8,7 @@ import { useAuth } from '../../context/AuthContext'
 import { formatDate, todayISO } from '../../lib/dates'
 import { displayPhone, PHONE_ERROR, isValidPhone, normalizePhone } from '../../lib/phone'
 import { supabase } from '../../lib/supabase'
-import type { Asset, TenancyWithAsset } from '../../types/database'
+import type { TenancyWithAsset } from '../../types/database'
 
 interface RentalForm {
   asset_id: string
@@ -24,9 +25,9 @@ const emptyForm: RentalForm = {
 }
 
 export function RentalsPage() {
-  const { resortId } = useAuth()
+  const { resortId, canWrite } = useAuth()
   const [rentals, setRentals] = useState<TenancyWithAsset[]>([])
-  const [assets, setAssets] = useState<Asset[]>([])
+  const [selectedAssetLabel, setSelectedAssetLabel] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -41,20 +42,15 @@ export function RentalsPage() {
 
     const today = todayISO()
 
-    const [rentalsResult, assetsResult] = await Promise.all([
-      supabase
-        .from('tenancies')
-        .select('*, assets!inner(label, resort_id)')
-        .eq('assets.resort_id', resortId)
-        .gte('ends_on', today)
-        .order('starts_on'),
-      supabase.from('assets').select('*').eq('resort_id', resortId).order('label'),
-    ])
+    const { data, error: fetchError } = await supabase
+      .from('tenancies')
+      .select('*, assets!inner(label, resort_id)')
+      .eq('assets.resort_id', resortId)
+      .gte('ends_on', today)
+      .order('starts_on')
 
-    if (rentalsResult.error) setError(rentalsResult.error.message)
-    else setRentals((rentalsResult.data ?? []) as TenancyWithAsset[])
-
-    if (assetsResult.data) setAssets(assetsResult.data as Asset[])
+    if (fetchError) setError(fetchError.message)
+    else setRentals((data ?? []) as TenancyWithAsset[])
     setLoading(false)
   }, [resortId])
 
@@ -63,10 +59,8 @@ export function RentalsPage() {
   }, [loadData])
 
   function openCreate() {
-    setForm({
-      ...emptyForm,
-      asset_id: assets[0]?.id ?? '',
-    })
+    setForm({ ...emptyForm })
+    setSelectedAssetLabel('')
     setFormError(null)
     setModalOpen(true)
   }
@@ -119,12 +113,12 @@ export function RentalsPage() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">Rentals</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Current and upcoming tenancies. Control transfers automatically on create.
+            {canWrite
+              ? 'Current and upcoming tenancies. Control transfers automatically on create.'
+              : 'Current and upcoming tenancies.'}
           </p>
         </div>
-        <Button onClick={openCreate} disabled={assets.length === 0}>
-          Create rental
-        </Button>
+        {canWrite ? <Button onClick={openCreate}>Create rental</Button> : null}
       </div>
 
       {error ? (
@@ -139,7 +133,7 @@ export function RentalsPage() {
               <th className="px-4 py-3 font-medium">Tenant phone</th>
               <th className="px-4 py-3 font-medium">Start</th>
               <th className="px-4 py-3 font-medium">End</th>
-              <th className="px-4 py-3 font-medium">Actions</th>
+              {canWrite ? <th className="px-4 py-3 font-medium">Actions</th> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -149,16 +143,18 @@ export function RentalsPage() {
                 <td className="px-4 py-3 text-gray-600">{displayPhone(rental.tenant_phone)}</td>
                 <td className="px-4 py-3 text-gray-600">{formatDate(rental.starts_on)}</td>
                 <td className="px-4 py-3 text-gray-600">{formatDate(rental.ends_on)}</td>
-                <td className="px-4 py-3">
-                  <Button variant="danger" onClick={() => void handleDelete(rental)}>
-                    Delete
-                  </Button>
-                </td>
+                {canWrite ? (
+                  <td className="px-4 py-3">
+                    <Button variant="danger" onClick={() => void handleDelete(rental)}>
+                      Delete
+                    </Button>
+                  </td>
+                ) : null}
               </tr>
             ))}
             {rentals.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-gray-400">
+                <td colSpan={canWrite ? 5 : 4} className="px-4 py-10 text-center text-gray-400">
                   No current or upcoming rentals.
                 </td>
               </tr>
@@ -167,7 +163,7 @@ export function RentalsPage() {
         </table>
       </div>
 
-      {modalOpen ? (
+      {modalOpen && canWrite && resortId ? (
         <Modal
           title="Create rental"
           onClose={() => setModalOpen(false)}
@@ -184,18 +180,16 @@ export function RentalsPage() {
         >
           <div className="space-y-4">
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-gray-700">Chalet</span>
-              <select
-                className="w-full rounded-xl border border-[#ECECEC] bg-white px-3.5 py-2.5 text-[#1A1A1A] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
+              <span className="mb-1.5 block text-sm font-medium text-gray-700">Chalet / cabine</span>
+              <UnitSearchSelect
+                resortId={resortId}
                 value={form.asset_id}
-                onChange={(event) => setForm({ ...form, asset_id: event.target.value })}
-              >
-                {assets.map((asset) => (
-                  <option key={asset.id} value={asset.id}>
-                    {asset.label}
-                  </option>
-                ))}
-              </select>
+                selectedLabel={selectedAssetLabel}
+                onChange={(id, opt) => {
+                  setForm({ ...form, asset_id: id })
+                  setSelectedAssetLabel(opt ? `${opt.label} (${opt.asset_type})` : '')
+                }}
+              />
             </label>
             <Input
               label="Tenant phone"

@@ -2,22 +2,32 @@ import type { CSSProperties } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
+import { PERMISSIONS } from '../../lib/permissions'
 
 const DEFAULT_ACCENT = '#1A1A1A'
 
-const navItems = [
+const readNavItems = [
   { to: '/admin/units', label: 'Chalets & Cabines' },
   { to: '/admin/rentals', label: 'Rentals' },
   { to: '/admin/today', label: 'Today & Consumption' },
   { to: '/admin/analytics', label: 'Analytics' },
   { to: '/admin/announcements', label: 'Announcements' },
-  { to: '/admin/reception-staff', label: 'Reception staff' },
-  { to: '/admin/configuration', label: 'Resort Configuration' },
 ]
 
+const writeNavItems = [
+  { to: '/admin/reception-staff', label: 'Reception staff', permission: PERMISSIONS.STAFF_MANAGE },
+  { to: '/admin/viewers', label: 'Dashboard viewers', permission: PERMISSIONS.STAFF_MANAGE },
+  { to: '/admin/roles', label: 'Roles & permissions', permission: PERMISSIONS.STAFF_MANAGE },
+  { to: '/admin/configuration', label: 'Resort Configuration', permission: PERMISSIONS.CONFIG_WRITE },
+] as const
+
 export function AdminLayout() {
-  const { resort, hasReception, signOut, setView } = useAuth()
+  const { resort, canWrite, hasReception, hasPermission, signOut, setView } = useAuth()
   const navigate = useNavigate()
+
+  const filteredWriteNav = writeNavItems.filter((item) => hasPermission(item.permission))
+
+  const navItems = [...readNavItems, ...filteredWriteNav]
 
   const accent = resort?.primary_color || DEFAULT_ACCENT
   const rootStyle = { '--accent': accent } as CSSProperties
@@ -51,7 +61,7 @@ export function AdminLayout() {
         <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: accent }}>
           {resort?.name ?? 'Resort'}
         </p>
-        <p className="mt-0.5 text-xs text-gray-400">Staff dashboard</p>
+        <p className="mt-0.5 text-xs text-gray-400">{canWrite ? 'Staff dashboard' : 'View-only dashboard'}</p>
       </div>
     )
   }

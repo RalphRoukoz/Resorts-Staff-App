@@ -17,7 +17,7 @@ const audienceLabels: Record<Audience, string> = {
 }
 
 export function AnnouncementsPage() {
-  const { resortId } = useAuth()
+  const { resortId, canWrite } = useAuth()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -128,9 +128,11 @@ export function AnnouncementsPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">Announcements</h2>
-          <p className="mt-1 text-sm text-gray-500">Compose notices for chalets and cabines.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            {canWrite ? 'Compose notices for chalets and cabines.' : 'Resort notices for chalets and cabines.'}
+          </p>
         </div>
-        <Button onClick={openCreate}>New announcement</Button>
+        {canWrite ? <Button onClick={openCreate}>New announcement</Button> : null}
       </div>
 
       {error ? (
@@ -166,9 +168,11 @@ export function AnnouncementsPage() {
                   </a>
                 ) : null}
               </div>
-              <Button variant="danger" onClick={() => void handleDelete(item)}>
-                Delete
-              </Button>
+              {canWrite ? (
+                <Button variant="danger" onClick={() => void handleDelete(item)}>
+                  Delete
+                </Button>
+              ) : null}
             </div>
           </div>
         ))}
@@ -179,7 +183,7 @@ export function AnnouncementsPage() {
         ) : null}
       </div>
 
-      {modalOpen ? (
+      {modalOpen && canWrite ? (
         <Modal
           title="New announcement"
           onClose={() => setModalOpen(false)}

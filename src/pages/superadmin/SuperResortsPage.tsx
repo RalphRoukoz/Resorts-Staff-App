@@ -16,6 +16,7 @@ interface ResortForm {
   chalet_weekend_limit: string
   cabine_weekday_limit: string
   cabine_weekend_limit: string
+  cabine_invites_enabled: boolean
   weekend_days: number[]
   primary_color: string
   logo_url: string | null
@@ -27,6 +28,7 @@ const emptyForm: ResortForm = {
   chalet_weekend_limit: '3',
   cabine_weekday_limit: '8',
   cabine_weekend_limit: '3',
+  cabine_invites_enabled: true,
   weekend_days: [5, 6],
   primary_color: DEFAULT_ACCENT,
   logo_url: null,
@@ -121,6 +123,7 @@ export function SuperResortsPage() {
       chalet_weekend_limit: String(resort.chalet_weekend_limit),
       cabine_weekday_limit: String(resort.cabine_weekday_limit),
       cabine_weekend_limit: String(resort.cabine_weekend_limit),
+      cabine_invites_enabled: resort.cabine_invites_enabled,
       weekend_days: [...resort.weekend_days],
       primary_color: resort.primary_color || DEFAULT_ACCENT,
       logo_url: resort.logo_url,
@@ -166,6 +169,7 @@ export function SuperResortsPage() {
       chalet_weekend_limit: Number(form.chalet_weekend_limit),
       cabine_weekday_limit: Number(form.cabine_weekday_limit),
       cabine_weekend_limit: Number(form.cabine_weekend_limit),
+      cabine_invites_enabled: form.cabine_invites_enabled,
       weekend_days: form.weekend_days,
       primary_color: form.primary_color,
       logo_url: nextLogoUrl,
@@ -313,6 +317,21 @@ export function SuperResortsPage() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-4 py-3">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-gray-300"
+                checked={form.cabine_invites_enabled}
+                onChange={(e) => setForm({ ...form, cabine_invites_enabled: e.target.checked })}
+              />
+              <span>
+                <span className="block text-sm font-medium text-[#1A1A1A]">Allow cabine invitations</span>
+                <span className="mt-0.5 block text-sm text-gray-500">
+                  Cabine owners and tenants can issue guest invitations when enabled.
+                </span>
+              </span>
+            </label>
+
             <div className="grid grid-cols-2 gap-4">
               <Input
                 label="Chalet weekday limit"
@@ -334,6 +353,7 @@ export function SuperResortsPage() {
                 min={0}
                 value={form.cabine_weekday_limit}
                 onChange={(e) => setForm({ ...form, cabine_weekday_limit: e.target.value })}
+                disabled={!form.cabine_invites_enabled}
               />
               <Input
                 label="Cabine weekend limit"
@@ -341,6 +361,7 @@ export function SuperResortsPage() {
                 min={0}
                 value={form.cabine_weekend_limit}
                 onChange={(e) => setForm({ ...form, cabine_weekend_limit: e.target.value })}
+                disabled={!form.cabine_invites_enabled}
               />
             </div>
 

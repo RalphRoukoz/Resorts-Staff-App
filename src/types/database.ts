@@ -1,4 +1,4 @@
-export type StaffRole = 'admin' | 'reception'
+export type StaffRole = 'admin' | 'reception' | 'viewer' | 'staff'
 
 export type AssetType = 'chalet' | 'cabine'
 
@@ -25,6 +25,7 @@ export interface Resort {
   chalet_weekend_limit: number
   cabine_weekday_limit: number
   cabine_weekend_limit: number
+  cabine_invites_enabled: boolean
   logo_url: string | null
   primary_color: string | null
   created_at: string
@@ -35,6 +36,7 @@ export interface Asset {
   resort_id: string
   label: string
   owner_phone: string
+  owner_phones: string[]
   asset_type: AssetType
   weekday_limit: number | null
   weekend_limit: number | null
@@ -78,7 +80,32 @@ export interface ResortStaff {
   resort_id: string
   user_id: string
   role: StaffRole
+  resort_role_id: string | null
   username: string | null
+}
+
+export interface ResortRole {
+  id: string
+  resort_id: string
+  name: string
+  permissions: string[]
+  is_owner: boolean
+  is_system: boolean
+  created_at: string
+}
+
+export interface InviteAllowanceBucket {
+  base: number
+  bonus: number
+  total: number
+  used: number
+  remaining: number
+}
+
+export interface AssetInviteAllowance {
+  month: string
+  weekday: InviteAllowanceBucket
+  weekend: InviteAllowanceBucket
 }
 
 export interface Announcement {

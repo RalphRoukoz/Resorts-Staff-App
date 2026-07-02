@@ -9,21 +9,32 @@ import {
 } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { usernameToEmail } from '../lib/auth'
+import {
+  PERMISSIONS,
+  type Permission,
+  type StaffWithRole,
+  permissionsForStaff,
+  staffHasPermission,
+} from '../lib/permissions'
 import { supabase } from '../lib/supabase'
-import type { Resort, ResortStaff } from '../types/database'
+import type { Resort } from '../types/database'
 
 export type AppView = 'admin' | 'reception'
 
 interface AuthContextValue {
   session: Session | null
   isSuperAdmin: boolean
-  staffRows: ResortStaff[]
+  staffRows: StaffWithRole[]
   resort: Resort | null
   resortId: string | null
   loading: boolean
   hasAdmin: boolean
+  hasViewer: boolean
+  canWrite: boolean
+  hasDashboard: boolean
   hasReception: boolean
   hasAccess: boolean
+  hasPermission: (permission: Permission) => boolean
   view: AppView
   setView: (view: AppView) => void
   signIn: (username: string, password: string) => Promise<void>
@@ -36,30 +47,26 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
-  const [staffRows, setStaffRows] = useState<ResortStaff[]>([])
+  const [staffRows, setStaffRows] = useState<StaffWithRole[]>([])
   const [resort, setResort] = useState<Resort | null>(null)
   const [loading, setLoading] = useState(true)
-  // True while the async role/access check is in flight. Used to prevent the
-  // "no access" screen from flashing before the check resolves.
   const [rolesLoading, setRolesLoading] = useState(false)
   const [view, setView] = useState<AppView>('admin')
 
   const loadResort = useCallback(async (resortId: string) => {
-    const { data, error } = await supabase
-      .from('resorts')
-      .select('*')
-      .eq('id', resortId)
-      .single()
-
-    if (error) throw error
-    setResort(data)
+    const { data, error } = await supabase.from('resorts').select('*').eq('id', resortId).single()
+    if (error) {
+      console.error('Failed to load resort', error)
+      setResort(null)
+      return
+    }
+    setResort(data as Resort)
   }, [])
 
   const loadUserRoles = useCallback(
     async (userId: string) => {
       setRolesLoading(true)
       try {
-        // Priority 1: check super_admins first
         const { data: superAdminRow } = await supabase
           .from('super_admins')
           .select('user_id')
@@ -75,22 +82,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setIsSuperAdmin(false)
 
-        // Priority 2: check resort_staff
         const { data, error } = await supabase
           .from('resort_staff')
-          .select('*')
+          .select('*, resort_roles(*)')
           .eq('user_id', userId)
 
         if (error) throw error
 
-        const rows = (data ?? []) as ResortStaff[]
+        const rows = (data ?? []) as StaffWithRole[]
         setStaffRows(rows)
 
-        const hasAdminRole = rows.some((row) => row.role === 'admin')
-        const hasReceptionRole = rows.some((row) => row.role === 'reception')
+        const canDashboard = staffHasPermission(rows, PERMISSIONS.DASHBOARD_READ)
+        const canScanner = staffHasPermission(rows, PERMISSIONS.SCANNER)
 
-        if (hasAdminRole) setView('admin')
-        else if (hasReceptionRole) setView('reception')
+        if (canDashboard) setView('admin')
+        else if (canScanner) setView('reception')
 
         const resortId = rows[0]?.resort_id
         if (resortId) await loadResort(resortId)
@@ -160,12 +166,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setResort(null)
   }, [])
 
-  const hasAdmin = staffRows.some((row) => row.role === 'admin')
-  const hasReception = staffRows.some((row) => row.role === 'reception')
+  const hasPermission = useCallback(
+    (permission: Permission) => staffHasPermission(staffRows, permission),
+    [staffRows],
+  )
+
+  const hasAdmin =
+    staffRows.some((row) => row.role === 'admin' || row.resort_roles?.is_owner) ||
+    staffHasPermission(staffRows, PERMISSIONS.DASHBOARD_WRITE)
+  const hasViewer =
+    staffRows.some((row) => row.role === 'viewer') ||
+    (staffHasPermission(staffRows, PERMISSIONS.DASHBOARD_READ) &&
+      !staffHasPermission(staffRows, PERMISSIONS.DASHBOARD_WRITE))
+  const canWrite = staffHasPermission(staffRows, PERMISSIONS.DASHBOARD_WRITE)
+  const hasDashboard = staffHasPermission(staffRows, PERMISSIONS.DASHBOARD_READ)
+  const hasReception = staffHasPermission(staffRows, PERMISSIONS.SCANNER)
   const hasAccess = isSuperAdmin || staffRows.length > 0
   const resortId = staffRows[0]?.resort_id ?? null
-  // Treat the app as "loading" during initial session restore AND while the
-  // role/access check is running, so routing never decides before it resolves.
   const isLoading = loading || rolesLoading
 
   const value = useMemo<AuthContextValue>(
@@ -177,8 +194,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resortId,
       loading: isLoading,
       hasAdmin,
+      hasViewer,
+      canWrite,
+      hasDashboard,
       hasReception,
       hasAccess,
+      hasPermission,
       view,
       setView,
       signIn,
@@ -193,8 +214,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resortId,
       isLoading,
       hasAdmin,
+      hasViewer,
+      canWrite,
+      hasDashboard,
       hasReception,
       hasAccess,
+      hasPermission,
       view,
       signIn,
       signOut,
@@ -210,3 +235,5 @@ export function useAuth() {
   if (!context) throw new Error('useAuth must be used within AuthProvider')
   return context
 }
+
+export { permissionsForStaff }

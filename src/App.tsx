@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { Spinner } from './components/ui/Spinner'
 import { useAuth } from './context/AuthContext'
+import { PERMISSIONS, type Permission } from './lib/permissions'
 import { AdminLayout } from './pages/admin/AdminLayout'
 import { AnalyticsPage } from './pages/admin/AnalyticsPage'
 import { AnnouncementsPage } from './pages/admin/AnnouncementsPage'
@@ -10,6 +11,8 @@ import { RentalsPage } from './pages/admin/RentalsPage'
 import { ResortConfigPage } from './pages/admin/ResortConfigPage'
 import { TodayPage } from './pages/admin/TodayPage'
 import { UnitsPage } from './pages/admin/UnitsPage'
+import { ViewerStaffPage } from './pages/admin/ViewerStaffPage'
+import { RolesPage } from './pages/admin/RolesPage'
 import { LoginPage } from './pages/LoginPage'
 import { NoAccessPage } from './pages/NoAccessPage'
 import { ReceptionScanner } from './pages/reception/ReceptionScanner'
@@ -19,13 +22,13 @@ import { SuperResortAdminsPage } from './pages/superadmin/SuperResortAdminsPage'
 import { SuperResortsPage } from './pages/superadmin/SuperResortsPage'
 
 function RootRedirect() {
-  const { isSuperAdmin, hasAdmin, hasReception, view } = useAuth()
+  const { isSuperAdmin, hasDashboard, hasReception, view } = useAuth()
 
   if (isSuperAdmin) {
     return <Navigate to="/superadmin/overview" replace />
   }
 
-  if (hasAdmin && view === 'admin') {
+  if (hasDashboard && view === 'admin') {
     return <Navigate to="/admin/units" replace />
   }
 
@@ -52,9 +55,23 @@ function RequireSuperAdmin() {
   return <Outlet />
 }
 
-function RequireAdmin() {
-  const { hasAdmin } = useAuth()
-  if (!hasAdmin) return <Navigate to="/scanner" replace />
+/** Resort dashboard: full admin or read-only viewer */
+function RequireDashboard() {
+  const { hasDashboard } = useAuth()
+  if (!hasDashboard) return <Navigate to="/scanner" replace />
+  return <Outlet />
+}
+
+/** Write actions: resort admin only */
+function RequireAdminWrite() {
+  const { canWrite } = useAuth()
+  if (!canWrite) return <Navigate to="/admin/units" replace />
+  return <Outlet />
+}
+
+function RequirePermission({ permission }: { permission: Permission }) {
+  const { hasPermission } = useAuth()
+  if (!hasPermission(permission)) return <Navigate to="/admin/units" replace />
   return <Outlet />
 }
 
@@ -80,7 +97,6 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/no-access" element={<NoAccessPage />} />
 
-      {/* Super-admin console */}
       <Route
         path="/superadmin"
         element={
@@ -97,12 +113,11 @@ export default function App() {
         </Route>
       </Route>
 
-      {/* Resort admin dashboard */}
       <Route
         path="/admin"
         element={
           <RequireAuth>
-            <RequireAdmin />
+            <RequireDashboard />
           </RequireAuth>
         }
       >
@@ -113,12 +128,17 @@ export default function App() {
           <Route path="today" element={<TodayPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
-          <Route path="reception-staff" element={<ReceptionStaffPage />} />
-          <Route path="configuration" element={<ResortConfigPage />} />
+          <Route element={<RequirePermission permission={PERMISSIONS.CONFIG_WRITE} />}>
+            <Route path="configuration" element={<ResortConfigPage />} />
+          </Route>
+          <Route element={<RequireAdminWrite />}>
+            <Route path="reception-staff" element={<ReceptionStaffPage />} />
+            <Route path="viewers" element={<ViewerStaffPage />} />
+            <Route path="roles" element={<RolesPage />} />
+          </Route>
         </Route>
       </Route>
 
-      {/* Reception scanner */}
       <Route
         path="/scanner"
         element={

@@ -1,32 +1,63 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
 import { DAY_LABELS } from '../../lib/dates'
 import { supabase } from '../../lib/supabase'
+import type { Resort } from '../../types/database'
 
 export function ResortConfigPage() {
-  const { resort, refreshResort } = useAuth()
+  const { resortId, refreshResort } = useAuth()
+
+  const [resort, setResort] = useState<Resort | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const [chaletWeekday, setChaletWeekday] = useState('')
   const [chaletWeekend, setChaletWeekend] = useState('')
   const [cabineWeekday, setCabineWeekday] = useState('')
   const [cabineWeekend, setCabineWeekend] = useState('')
+  const [cabineInvitesEnabled, setCabineInvitesEnabled] = useState(true)
   const [weekendDays, setWeekendDays] = useState<number[]>([])
 
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  const loadConfig = useCallback(async () => {
+    if (!resortId) {
+      setResort(null)
+      setLoadError('No resort is assigned to this account.')
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    setLoadError(null)
+
+    const { data, error: fetchError } = await supabase.from('resorts').select('*').eq('id', resortId).single()
+
+    if (fetchError) {
+      setResort(null)
+      setLoadError(fetchError.message)
+    } else {
+      const row = data as Resort
+      setResort(row)
+      setChaletWeekday(String(row.chalet_weekday_limit))
+      setChaletWeekend(String(row.chalet_weekend_limit))
+      setCabineWeekday(String(row.cabine_weekday_limit))
+      setCabineWeekend(String(row.cabine_weekend_limit))
+      setCabineInvitesEnabled(row.cabine_invites_enabled ?? true)
+      setWeekendDays(Array.isArray(row.weekend_days) ? [...row.weekend_days] : [])
+    }
+
+    setLoading(false)
+  }, [resortId])
+
   useEffect(() => {
-    if (!resort) return
-    setChaletWeekday(String(resort.chalet_weekday_limit))
-    setChaletWeekend(String(resort.chalet_weekend_limit))
-    setCabineWeekday(String(resort.cabine_weekday_limit))
-    setCabineWeekend(String(resort.cabine_weekend_limit))
-    setWeekendDays([...resort.weekend_days])
-  }, [resort])
+    void loadConfig()
+  }, [loadConfig])
 
   function toggleDay(day: number) {
     setWeekendDays((current) =>
@@ -50,6 +81,7 @@ export function ResortConfigPage() {
         chalet_weekend_limit: Number(chaletWeekend),
         cabine_weekday_limit: Number(cabineWeekday),
         cabine_weekend_limit: Number(cabineWeekend),
+        cabine_invites_enabled: cabineInvitesEnabled,
         weekend_days: weekendDays,
       })
       .eq('id', resort.id)
@@ -59,11 +91,25 @@ export function ResortConfigPage() {
     } else {
       setSuccess(true)
       await refreshResort()
+      await loadConfig()
     }
     setSaving(false)
   }
 
-  if (!resort) return <Spinner label="Loading configuration…" />
+  if (loading) return <Spinner label="Loading configuration…" />
+
+  if (loadError || !resort) {
+    return (
+      <div className="max-w-2xl">
+        <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {loadError ?? 'Unable to load resort configuration.'}
+        </p>
+        <Button className="mt-4" variant="secondary" onClick={() => void loadConfig()}>
+          Retry
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-2xl">
@@ -75,6 +121,22 @@ export function ResortConfigPage() {
       </div>
 
       <section className="space-y-5 rounded-2xl border border-[#ECECEC] bg-white p-6 shadow-sm">
+        <h3 className="text-lg font-medium text-[#1A1A1A]">Cabine invitations</h3>
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-4 py-3">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 rounded border-gray-300"
+            checked={cabineInvitesEnabled}
+            onChange={(e) => setCabineInvitesEnabled(e.target.checked)}
+          />
+          <span>
+            <span className="block text-sm font-medium text-[#1A1A1A]">Allow cabines to issue invitations</span>
+            <span className="mt-0.5 block text-sm text-gray-500">
+              When off, cabine owners and tenants cannot create guest invitations for this resort.
+            </span>
+          </span>
+        </label>
+
         <h3 className="text-lg font-medium text-[#1A1A1A]">Default invite limits</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
@@ -97,6 +159,7 @@ export function ResortConfigPage() {
             min={0}
             value={cabineWeekday}
             onChange={(e) => setCabineWeekday(e.target.value)}
+            disabled={!cabineInvitesEnabled}
           />
           <Input
             label="Cabine — weekend limit"
@@ -104,6 +167,7 @@ export function ResortConfigPage() {
             min={0}
             value={cabineWeekend}
             onChange={(e) => setCabineWeekend(e.target.value)}
+            disabled={!cabineInvitesEnabled}
           />
         </div>
 
