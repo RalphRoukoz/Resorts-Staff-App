@@ -82,7 +82,8 @@
     "addInvites": "إضافة دعوات",
     "allowanceUnavailable": "—",
     "noData": "لا توجد بيانات حصة",
-    "unlimited": "غير محدود"
+    "unlimited": "غير محدود",
+    "loading": "جارٍ تحميل الوحدات…"
   },
   "config": {
     "title": "إعدادات المنتجع",

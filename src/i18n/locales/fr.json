@@ -82,7 +82,8 @@
     "addInvites": "Ajouter des invitations",
     "allowanceUnavailable": "—",
     "noData": "Pas de données quota",
-    "unlimited": "Illimité"
+    "unlimited": "Illimité",
+    "loading": "Chargement des unités…"
   },
   "config": {
     "title": "Configuration resort",

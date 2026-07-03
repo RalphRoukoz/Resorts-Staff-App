@@ -48,6 +48,25 @@ function allowanceCell(
   return formatAllowanceCell(bucket, noDataLabel, unlimitedLabel)
 }
 
+function AllowanceValue({
+  loading,
+  allowance,
+  bucket,
+  noDataLabel,
+  unlimitedLabel,
+}: {
+  loading: boolean
+  allowance: AssetInviteAllowance | undefined
+  bucket: InviteAllowanceBucket | undefined
+  noDataLabel: string
+  unlimitedLabel: string
+}) {
+  if (loading) {
+    return <span className="inline-block h-4 w-12 animate-pulse rounded bg-gray-200" aria-hidden />
+  }
+  return <>{allowanceCell(allowance, bucket, noDataLabel, unlimitedLabel)}</>
+}
+
 function mapAllowanceRow(
   id: string,
   row: Record<string, unknown> | null | undefined,
@@ -85,6 +104,7 @@ export function UnitsPage() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | AssetType>('all')
   const [loading, setLoading] = useState(true)
+  const [allowancesLoading, setAllowancesLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Asset | null>(null)
@@ -103,47 +123,55 @@ export function UnitsPage() {
   const loadAllowances = useCallback(async (assetIds: string[]) => {
     if (assetIds.length === 0) {
       setAllowances({})
+      setAllowancesLoading(false)
       return
     }
+
+    setAllowancesLoading(true)
+    setAllowances({})
 
     const applyRows = (rows: Array<[string, AssetInviteAllowance] | null>) => {
       setAllowances(Object.fromEntries(rows.filter((entry): entry is [string, AssetInviteAllowance] => entry !== null)))
     }
 
-    const { data, error: rpcError } = await supabase.rpc('asset_invite_allowances_batch', {
-      p_asset_ids: assetIds,
-    })
+    try {
+      const { data, error: rpcError } = await supabase.rpc('asset_invite_allowances_batch', {
+        p_asset_ids: assetIds,
+      })
 
-    const batchPayload = data as Record<string, unknown> | null
-    if (!rpcError && batchPayload && !batchPayload.error) {
-      const batch = batchPayload as Record<string, Record<string, unknown>>
-      const entries = assetIds.map((id) => mapAllowanceRow(id, batch[id]))
-      if (entries.some((entry) => entry !== null)) {
-        applyRows(entries)
+      const batchPayload = data as Record<string, unknown> | null
+      if (!rpcError && batchPayload && !batchPayload.error) {
+        const batch = batchPayload as Record<string, Record<string, unknown>>
+        const entries = assetIds.map((id) => mapAllowanceRow(id, batch[id]))
+        if (entries.some((entry) => entry !== null)) {
+          applyRows(entries)
+          return
+        }
+      }
+
+      const fallback = await Promise.all(
+        assetIds.map(async (id) => {
+          const { data: row, error } = await supabase.rpc('asset_invite_allowance', { p_asset: id })
+          if (error || !row) return null
+          return mapAllowanceRow(id, row as Record<string, unknown>)
+        }),
+      )
+
+      if (fallback.some((entry) => entry !== null)) {
+        applyRows(fallback)
         return
       }
+
+      if (rpcError) {
+        console.error('Failed to load invitation allowances', rpcError.message)
+      } else if (batchPayload?.error) {
+        console.error('Failed to load invitation allowances', batchPayload.error)
+      }
+
+      setAllowances({})
+    } finally {
+      setAllowancesLoading(false)
     }
-
-    const fallback = await Promise.all(
-      assetIds.map(async (id) => {
-        const { data: row, error } = await supabase.rpc('asset_invite_allowance', { p_asset: id })
-        if (error || !row) return null
-        return mapAllowanceRow(id, row as Record<string, unknown>)
-      }),
-    )
-
-    if (fallback.some((entry) => entry !== null)) {
-      applyRows(fallback)
-      return
-    }
-
-    if (rpcError) {
-      console.error('Failed to load invitation allowances', rpcError.message)
-    } else if (batchPayload?.error) {
-      console.error('Failed to load invitation allowances', batchPayload.error)
-    }
-
-    setAllowances({})
   }, [])
 
   const loadUnits = useCallback(async () => {
@@ -182,11 +210,12 @@ export function UnitsPage() {
     if (fetchError) {
       setError(fetchError.message)
       setUnits([])
+      setAllowances({})
     } else {
       const rows = (data ?? []) as Asset[]
       setUnits(rows)
       setTotal(count ?? 0)
-      void loadAllowances(rows.map((r) => r.id))
+      await loadAllowances(rows.map((r) => r.id))
     }
     setLoading(false)
   }, [resortId, page, search, typeFilter, loadAllowances])
@@ -365,10 +394,15 @@ export function UnitsPage() {
         <p className="mb-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       ) : null}
 
-      {loading ? (
-        <Spinner label="Loading units…" />
+      {loading && units.length === 0 ? (
+        <Spinner label={t('units.loading')} />
       ) : (
-        <>
+        <div className={loading ? 'relative' : undefined}>
+          {loading ? (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70">
+              <Spinner label={t('units.loading')} />
+            </div>
+          ) : null}
           <p className="mb-2 text-xs text-gray-400">
             Invitations remaining / total for {monthLabel} (weekday · weekend)
           </p>
@@ -409,14 +443,26 @@ export function UnitsPage() {
                       </td>
                       <td className="tnum px-4 py-3 text-gray-600">{displayPhoneList(unit.owner_phones)}</td>
                       <td className="tnum px-4 py-3 text-gray-600">
-                        {allowanceCell(allowance, allowance?.weekday, t('units.noData'), t('units.unlimited'))}
-                        {allowance?.weekday?.bonus ? (
+                        <AllowanceValue
+                          loading={allowancesLoading}
+                          allowance={allowance}
+                          bucket={allowance?.weekday}
+                          noDataLabel={t('units.noData')}
+                          unlimitedLabel={t('units.unlimited')}
+                        />
+                        {!allowancesLoading && allowance?.weekday?.bonus ? (
                           <span className="ml-1 text-xs text-amber-600">+{allowance.weekday.bonus} bonus</span>
                         ) : null}
                       </td>
                       <td className="tnum px-4 py-3 text-gray-600">
-                        {allowanceCell(allowance, allowance?.weekend, t('units.noData'), t('units.unlimited'))}
-                        {allowance?.weekend?.bonus ? (
+                        <AllowanceValue
+                          loading={allowancesLoading}
+                          allowance={allowance}
+                          bucket={allowance?.weekend}
+                          noDataLabel={t('units.noData')}
+                          unlimitedLabel={t('units.unlimited')}
+                        />
+                        {!allowancesLoading && allowance?.weekend?.bonus ? (
                           <span className="ml-1 text-xs text-amber-600">+{allowance.weekend.bonus} bonus</span>
                         ) : null}
                       </td>
@@ -472,7 +518,7 @@ export function UnitsPage() {
               </Button>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {modalOpen && canManageUnits ? (

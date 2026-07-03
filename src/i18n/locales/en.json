@@ -82,7 +82,8 @@
     "addInvites": "Add invites",
     "allowanceUnavailable": "—",
     "noData": "No allowance data",
-    "unlimited": "Unlimited"
+    "unlimited": "Unlimited",
+    "loading": "Loading units…"
   },
   "config": {
     "title": "Resort Configuration",
