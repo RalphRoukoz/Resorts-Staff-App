@@ -1,33 +1,79 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
 import { PERMISSIONS } from '../../lib/permissions'
+import { formatAllowanceCell, parseAllowanceBucket } from '../../lib/allowance'
+import { formatPersonName } from '../../lib/names'
+import { resortLimitsForAssetType } from '../../lib/resortLimits'
 import { PAGE_SIZE, totalPages } from '../../lib/pagination'
 import { displayPhoneList, isValidPhone, parsePhoneList, PHONE_ERROR, normalizePhone } from '../../lib/phone'
 import { supabase } from '../../lib/supabase'
-import type { Asset, AssetInviteAllowance, AssetType } from '../../types/database'
+import type { Asset, AssetInviteAllowance, AssetType, InviteAllowanceBucket, Resort } from '../../types/database'
 
 interface UnitForm {
   label: string
+  owner_first_name: string
+  owner_last_name: string
   owner_phones_text: string
   asset_type: AssetType
 }
 
 const emptyForm: UnitForm = {
   label: '',
+  owner_first_name: '',
+  owner_last_name: '',
   owner_phones_text: '',
   asset_type: 'chalet',
 }
 
-function allowanceCell(bucket: { total: number; remaining: number } | undefined): string {
-  if (!bucket) return '—'
-  return `${bucket.remaining} / ${bucket.total}`
+function unitSupportsBonusInvites(unit: Asset, resort: Resort | null): boolean {
+  if (unit.asset_type === 'chalet') return true
+  if (unit.asset_type === 'cabine') {
+    return Boolean(resort?.cabine_invites_enabled && resort?.cabine_limit_invites)
+  }
+  return false
+}
+
+function allowanceCell(
+  allowance: AssetInviteAllowance | undefined,
+  bucket: InviteAllowanceBucket | undefined,
+  noDataLabel: string,
+  unlimitedLabel: string,
+): string {
+  if (allowance?.unlimited) return unlimitedLabel
+  return formatAllowanceCell(bucket, noDataLabel, unlimitedLabel)
+}
+
+function mapAllowanceRow(
+  id: string,
+  row: Record<string, unknown> | null | undefined,
+): [string, AssetInviteAllowance] | null {
+  if (!row || row.error) return null
+
+  const weekday = parseAllowanceBucket(row.weekday)
+  const weekend = parseAllowanceBucket(row.weekend)
+  const unlimited = row.unlimited === true
+  if (!weekday && !weekend && !unlimited) return null
+
+  return [
+    id,
+    {
+      month: String(row.month ?? ''),
+      unlimited,
+      period_label: row.period_label ? String(row.period_label) : undefined,
+      period_mode: row.period_mode as AssetInviteAllowance['period_mode'],
+      weekday: weekday ?? { base: 0, bonus: 0, total: 0, used: 0, remaining: 0 },
+      weekend: weekend ?? { base: 0, bonus: 0, total: 0, used: 0, remaining: 0 },
+    },
+  ]
 }
 
 export function UnitsPage() {
+  const { t } = useTranslation()
   const { resortId, resort, hasPermission } = useAuth()
   const canManageUnits = hasPermission(PERMISSIONS.UNITS_WRITE)
   const canGrantBonus = hasPermission(PERMISSIONS.INVITATIONS_BONUS)
@@ -55,14 +101,49 @@ export function UnitsPage() {
   const pages = totalPages(total)
 
   const loadAllowances = useCallback(async (assetIds: string[]) => {
-    const entries = await Promise.all(
+    if (assetIds.length === 0) {
+      setAllowances({})
+      return
+    }
+
+    const applyRows = (rows: Array<[string, AssetInviteAllowance] | null>) => {
+      setAllowances(Object.fromEntries(rows.filter((entry): entry is [string, AssetInviteAllowance] => entry !== null)))
+    }
+
+    const { data, error: rpcError } = await supabase.rpc('asset_invite_allowances_batch', {
+      p_asset_ids: assetIds,
+    })
+
+    const batchPayload = data as Record<string, unknown> | null
+    if (!rpcError && batchPayload && !batchPayload.error) {
+      const batch = batchPayload as Record<string, Record<string, unknown>>
+      const entries = assetIds.map((id) => mapAllowanceRow(id, batch[id]))
+      if (entries.some((entry) => entry !== null)) {
+        applyRows(entries)
+        return
+      }
+    }
+
+    const fallback = await Promise.all(
       assetIds.map(async (id) => {
-        const { data, error: rpcError } = await supabase.rpc('asset_invite_allowance', { p_asset: id })
-        if (rpcError || !data || data.error) return [id, null] as const
-        return [id, data as AssetInviteAllowance] as const
+        const { data: row, error } = await supabase.rpc('asset_invite_allowance', { p_asset: id })
+        if (error || !row) return null
+        return mapAllowanceRow(id, row as Record<string, unknown>)
       }),
     )
-    setAllowances(Object.fromEntries(entries.filter(([, v]) => v != null) as [string, AssetInviteAllowance][]))
+
+    if (fallback.some((entry) => entry !== null)) {
+      applyRows(fallback)
+      return
+    }
+
+    if (rpcError) {
+      console.error('Failed to load invitation allowances', rpcError.message)
+    } else if (batchPayload?.error) {
+      console.error('Failed to load invitation allowances', batchPayload.error)
+    }
+
+    setAllowances({})
   }, [])
 
   const loadUnits = useCallback(async () => {
@@ -82,7 +163,12 @@ export function UnitsPage() {
 
     const trimmed = search.trim()
     if (trimmed) {
-      const filters = [`label.ilike.%${trimmed}%`, `owner_phone.ilike.%${trimmed}%`]
+      const filters = [
+        `label.ilike.%${trimmed}%`,
+        `owner_phone.ilike.%${trimmed}%`,
+        `owner_first_name.ilike.%${trimmed}%`,
+        `owner_last_name.ilike.%${trimmed}%`,
+      ]
       const normalized = normalizePhone(trimmed)
       if (normalized) filters.push(`owner_phones.cs.{${normalized}}`)
       query = query.or(filters.join(','))
@@ -124,6 +210,8 @@ export function UnitsPage() {
     setEditing(unit)
     setForm({
       label: unit.label,
+      owner_first_name: unit.owner_first_name ?? '',
+      owner_last_name: unit.owner_last_name ?? '',
       owner_phones_text: (unit.owner_phones?.length ? unit.owner_phones : [unit.owner_phone]).join('\n'),
       asset_type: unit.asset_type,
     })
@@ -144,6 +232,10 @@ export function UnitsPage() {
       setFormError('Label is required')
       return
     }
+    if (!editing && (!form.owner_first_name.trim() || !form.owner_last_name.trim())) {
+      setFormError('Owner first and last name are required')
+      return
+    }
     const rawOwnerPhones = form.owner_phones_text
       .split(/[\n,;]/)
       .map((value) => value.trim())
@@ -161,13 +253,19 @@ export function UnitsPage() {
     setSaving(true)
     setFormError(null)
 
+    const defaults = resort
+      ? resortLimitsForAssetType(resort, form.asset_type)
+      : { weekday_limit: 0, weekend_limit: 0 }
+
     const payload = {
       label: form.label.trim(),
+      owner_first_name: form.owner_first_name.trim() || null,
+      owner_last_name: form.owner_last_name.trim() || null,
       owner_phone: ownerPhones[0],
       owner_phones: ownerPhones,
       asset_type: form.asset_type,
-      weekday_limit: null,
-      weekend_limit: null,
+      weekday_limit: editing?.weekday_limit ?? defaults.weekday_limit,
+      weekend_limit: editing?.weekend_limit ?? defaults.weekend_limit,
     }
 
     if (editing) {
@@ -280,7 +378,8 @@ export function UnitsPage() {
                 <tr>
                   <th className="px-4 py-3 font-medium">Label</th>
                   <th className="px-4 py-3 font-medium">Type</th>
-                  <th className="px-4 py-3 font-medium">Owner phones</th>
+                  <th className="px-4 py-3 font-medium">{t('units.owner')}</th>
+                  <th className="px-4 py-3 font-medium">{t('units.ownerPhones')}</th>
                   <th className="px-4 py-3 font-medium">Weekday</th>
                   <th className="px-4 py-3 font-medium">Weekend</th>
                   {canManageUnits || canGrantBonus ? (
@@ -305,15 +404,18 @@ export function UnitsPage() {
                           {unit.asset_type}
                         </span>
                       </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {formatPersonName(unit.owner_first_name, unit.owner_last_name, t('units.noOwnerName'))}
+                      </td>
                       <td className="tnum px-4 py-3 text-gray-600">{displayPhoneList(unit.owner_phones)}</td>
                       <td className="tnum px-4 py-3 text-gray-600">
-                        {allowanceCell(allowance?.weekday)}
+                        {allowanceCell(allowance, allowance?.weekday, t('units.noData'), t('units.unlimited'))}
                         {allowance?.weekday?.bonus ? (
                           <span className="ml-1 text-xs text-amber-600">+{allowance.weekday.bonus} bonus</span>
                         ) : null}
                       </td>
                       <td className="tnum px-4 py-3 text-gray-600">
-                        {allowanceCell(allowance?.weekend)}
+                        {allowanceCell(allowance, allowance?.weekend, t('units.noData'), t('units.unlimited'))}
                         {allowance?.weekend?.bonus ? (
                           <span className="ml-1 text-xs text-amber-600">+{allowance.weekend.bonus} bonus</span>
                         ) : null}
@@ -321,9 +423,9 @@ export function UnitsPage() {
                       {canManageUnits || canGrantBonus ? (
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-2">
-                            {canGrantBonus && unit.asset_type === 'chalet' ? (
+                            {canGrantBonus && unitSupportsBonusInvites(unit, resort) ? (
                               <Button variant="secondary" onClick={() => openBonus(unit)}>
-                                Add invites
+                                {t('units.addInvites')}
                               </Button>
                             ) : null}
                             {canManageUnits ? (
@@ -345,7 +447,7 @@ export function UnitsPage() {
                 {units.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={canManageUnits || canGrantBonus ? 6 : 5}
+                      colSpan={canManageUnits || canGrantBonus ? 7 : 6}
                       className="px-4 py-10 text-center text-gray-400"
                     >
                       No units match your filters.
@@ -405,8 +507,20 @@ export function UnitsPage() {
                 <option value="cabine">Cabine</option>
               </select>
             </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label={t('units.ownerFirstName')}
+                value={form.owner_first_name}
+                onChange={(event) => setForm({ ...form, owner_first_name: event.target.value })}
+              />
+              <Input
+                label={t('units.ownerLastName')}
+                value={form.owner_last_name}
+                onChange={(event) => setForm({ ...form, owner_last_name: event.target.value })}
+              />
+            </div>
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-gray-700">Owner phones</span>
+              <span className="mb-1.5 block text-sm font-medium text-gray-700">{t('units.ownerPhones')}</span>
               <textarea
                 className="min-h-28 w-full rounded-xl border border-[#ECECEC] bg-white px-3.5 py-2.5 text-[#1A1A1A] placeholder:text-gray-400 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
                 value={form.owner_phones_text}

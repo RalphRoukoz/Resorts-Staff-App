@@ -1,17 +1,20 @@
 import type { CSSProperties } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
 
 const ACCENT = '#0E7C7B'
 
 const navItems = [
-  { to: '/superadmin/overview', label: 'Overview' },
-  { to: '/superadmin/resorts', label: 'Resorts' },
-  { to: '/superadmin/admins', label: 'Resort admins' },
-]
+  { to: '/superadmin/overview', labelKey: 'nav.overview' },
+  { to: '/superadmin/resorts', labelKey: 'nav.resorts' },
+  { to: '/superadmin/admins', labelKey: 'nav.resortAdmins' },
+] as const
 
 export function SuperAdminLayout() {
+  const { t } = useTranslation()
   const { signOut } = useAuth()
 
   const rootStyle = { '--accent': ACCENT } as CSSProperties
@@ -25,9 +28,12 @@ export function SuperAdminLayout() {
       <aside className="hidden w-64 shrink-0 flex-col border-r border-[#ECECEC] bg-white lg:flex">
         <div className="border-b border-[#ECECEC] px-5 py-6">
           <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: ACCENT }}>
-            Super Admin
+            {t('app.superAdmin')}
           </p>
-          <h1 className="mt-1 text-lg font-semibold text-[#1A1A1A]">Platform Console</h1>
+          <h1 className="mt-1 text-lg font-semibold text-[#1A1A1A]">{t('app.platformConsole')}</h1>
+          <div className="mt-4">
+            <LanguageSwitcher />
+          </div>
         </div>
 
         <nav className="flex-1 space-y-1 p-3">
@@ -42,14 +48,14 @@ export function SuperAdminLayout() {
                 }`
               }
             >
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>
 
         <div className="border-t border-[#ECECEC] p-3">
           <Button variant="ghost" fullWidth onClick={() => void signOut()}>
-            Sign out
+            {t('common.signOut')}
           </Button>
         </div>
       </aside>
@@ -58,13 +64,16 @@ export function SuperAdminLayout() {
         <header className="flex items-center justify-between border-b border-[#ECECEC] bg-white px-4 py-3 lg:hidden">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: ACCENT }}>
-              Super Admin
+              {t('app.superAdmin')}
             </p>
-            <p className="font-medium text-[#1A1A1A]">Platform Console</p>
+            <p className="font-medium text-[#1A1A1A]">{t('app.platformConsole')}</p>
           </div>
-          <Button variant="ghost" onClick={() => void signOut()}>
-            Sign out
-          </Button>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <Button variant="ghost" onClick={() => void signOut()}>
+              {t('common.signOut')}
+            </Button>
+          </div>
         </header>
 
         <nav className="flex gap-1 overflow-x-auto border-b border-[#ECECEC] bg-white px-2 py-2 lg:hidden">
@@ -74,12 +83,10 @@ export function SuperAdminLayout() {
               to={item.to}
               style={navLinkStyle}
               className={({ isActive }) =>
-                `whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium ${
-                  isActive ? '' : 'text-gray-500'
-                }`
+                `whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium ${isActive ? '' : 'text-gray-500'}`
               }
             >
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>

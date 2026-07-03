@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { useAuth } from '../context/AuthContext'
 
 export function LoginPage() {
+  const { t } = useTranslation()
   const { session, loading, hasAccess, signIn } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -29,7 +31,7 @@ export function LoginPage() {
     try {
       await signIn(username, password)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign in failed')
+      setError(err instanceof Error ? err.message : t('login.failed'))
     } finally {
       setSubmitting(false)
     }
@@ -38,30 +40,13 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#FAFAFA] px-4">
       <div className="w-full max-w-md rounded-2xl border border-[#ECECEC] bg-white p-8 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-          Staff Portal
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#1A1A1A]">Sign in</h1>
-        <p className="mt-2 text-sm text-gray-500">
-          Enter your staff username and password.
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">{t('login.portal')}</p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#1A1A1A]">{t('login.title')}</h1>
+        <p className="mt-2 text-sm text-gray-500">{t('login.subtitle')}</p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-          <Input
-            label="Username"
-            autoComplete="username"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            required
-          />
-          <Input
-            label="Password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
+          <Input label={t('login.username')} autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required />
+          <Input label={t('login.password')} type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
 
           {error ? (
             <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -70,7 +55,7 @@ export function LoginPage() {
           ) : null}
 
           <Button type="submit" fullWidth disabled={submitting}>
-            {submitting ? 'Signing in…' : 'Sign in'}
+            {submitting ? t('login.signingIn') : t('common.signIn')}
           </Button>
         </form>
       </div>

@@ -15,6 +15,14 @@ export interface ResortWithStats extends Resort {
 
 export type InvitationStatus = 'issued' | 'validated' | 'cancelled' | 'expired'
 
+export type PaymentStatus = 'not_required' | 'pending' | 'paid'
+
+export type InvitationPeriodMode = 'monthly' | 'whole_period'
+
+export type PeriodAllowanceMode = 'monthly_within_period' | 'entire_period'
+
+export type ScanCheckpoint = 'reception' | 'gate'
+
 export type DayType = 'weekday' | 'weekend'
 
 export interface Resort {
@@ -26,6 +34,13 @@ export interface Resort {
   cabine_weekday_limit: number
   cabine_weekend_limit: number
   cabine_invites_enabled: boolean
+  cabine_limit_invites: boolean
+  cabine_paid_invites: boolean
+  chalet_double_scan: boolean
+  invitation_period_mode: InvitationPeriodMode
+  invitation_period_start: string | null
+  invitation_period_end: string | null
+  period_allowance_mode: PeriodAllowanceMode
   logo_url: string | null
   primary_color: string | null
   created_at: string
@@ -37,6 +52,8 @@ export interface Asset {
   label: string
   owner_phone: string
   owner_phones: string[]
+  owner_first_name: string | null
+  owner_last_name: string | null
   asset_type: AssetType
   weekday_limit: number | null
   weekend_limit: number | null
@@ -47,6 +64,8 @@ export interface Tenancy {
   id: string
   asset_id: string
   tenant_phone: string
+  tenant_first_name: string | null
+  tenant_last_name: string | null
   starts_on: string
   ends_on: string
   created_at: string
@@ -66,6 +85,11 @@ export interface Invitation {
   day_type: DayType
   token: string
   status: InvitationStatus
+  payment_status: PaymentStatus
+  reception_scanned_at: string | null
+  reception_scanned_by: string | null
+  gate_scanned_at: string | null
+  gate_scanned_by: string | null
   validated_at: string | null
   validated_by: string | null
   created_at: string
@@ -97,13 +121,18 @@ export interface ResortRole {
 export interface InviteAllowanceBucket {
   base: number
   bonus: number
-  total: number
+  total: number | null
   used: number
-  remaining: number
+  remaining: number | null
 }
 
 export interface AssetInviteAllowance {
   month: string
+  unlimited?: boolean
+  period_label?: string
+  period_start?: string
+  period_end?: string
+  period_mode?: InvitationPeriodMode
   weekday: InviteAllowanceBucket
   weekend: InviteAllowanceBucket
 }
@@ -115,6 +144,7 @@ export interface Announcement {
   body: string | null
   pdf_url: string | null
   audience: Audience
+  expires_at: string | null
   created_at: string
 }
 
@@ -124,6 +154,9 @@ export interface ValidateSuccess {
   chalet: string
   resort: string
   visit_date: string
+  checkpoint?: ScanCheckpoint
+  next_checkpoint?: ScanCheckpoint
+  final?: boolean
 }
 
 export interface ValidateFailure {

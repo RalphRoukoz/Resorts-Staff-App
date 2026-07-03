@@ -6,16 +6,15 @@ import { PERMISSIONS, type Permission } from './lib/permissions'
 import { AdminLayout } from './pages/admin/AdminLayout'
 import { AnalyticsPage } from './pages/admin/AnalyticsPage'
 import { AnnouncementsPage } from './pages/admin/AnnouncementsPage'
-import { ReceptionStaffPage } from './pages/admin/ReceptionStaffPage'
+import { StaffPage } from './pages/admin/StaffPage'
 import { RentalsPage } from './pages/admin/RentalsPage'
 import { ResortConfigPage } from './pages/admin/ResortConfigPage'
 import { TodayPage } from './pages/admin/TodayPage'
 import { UnitsPage } from './pages/admin/UnitsPage'
-import { ViewerStaffPage } from './pages/admin/ViewerStaffPage'
-import { RolesPage } from './pages/admin/RolesPage'
 import { LoginPage } from './pages/LoginPage'
 import { NoAccessPage } from './pages/NoAccessPage'
 import { ReceptionScanner } from './pages/reception/ReceptionScanner'
+import { GateScanner } from './pages/reception/GateScanner'
 import { SuperAdminLayout } from './pages/superadmin/SuperAdminLayout'
 import { SuperOverviewPage } from './pages/superadmin/SuperOverviewPage'
 import { SuperResortAdminsPage } from './pages/superadmin/SuperResortAdminsPage'
@@ -62,12 +61,6 @@ function RequireDashboard() {
   return <Outlet />
 }
 
-/** Write actions: resort admin only */
-function RequireAdminWrite() {
-  const { canWrite } = useAuth()
-  if (!canWrite) return <Navigate to="/admin/units" replace />
-  return <Outlet />
-}
 
 function RequirePermission({ permission }: { permission: Permission }) {
   const { hasPermission } = useAuth()
@@ -131,11 +124,12 @@ export default function App() {
           <Route element={<RequirePermission permission={PERMISSIONS.CONFIG_WRITE} />}>
             <Route path="configuration" element={<ResortConfigPage />} />
           </Route>
-          <Route element={<RequireAdminWrite />}>
-            <Route path="reception-staff" element={<ReceptionStaffPage />} />
-            <Route path="viewers" element={<ViewerStaffPage />} />
-            <Route path="roles" element={<RolesPage />} />
+          <Route element={<RequirePermission permission={PERMISSIONS.STAFF_MANAGE} />}>
+            <Route path="staff" element={<StaffPage />} />
           </Route>
+          <Route path="reception-staff" element={<Navigate to="/admin/staff" replace />} />
+          <Route path="viewers" element={<Navigate to="/admin/staff" replace />} />
+          <Route path="roles" element={<Navigate to="/admin/staff" replace />} />
         </Route>
       </Route>
 
@@ -148,6 +142,7 @@ export default function App() {
         }
       >
         <Route index element={<ReceptionScanner />} />
+        <Route path="gate" element={<GateScanner />} />
       </Route>
 
       <Route path="/" element={<RootRedirect />} />

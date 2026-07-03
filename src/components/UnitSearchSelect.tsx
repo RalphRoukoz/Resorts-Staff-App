@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { normalizePhone } from '../lib/phone'
 import { supabase } from '../lib/supabase'
 import type { AssetType } from '../types/database'
@@ -13,6 +13,8 @@ interface UnitSearchSelectProps {
   resortId: string
   value: string
   onChange: (assetId: string, option?: UnitOption) => void
+  /** Called after a unit is picked from the dropdown */
+  onSelect?: (option: UnitOption) => void
   /** Pre-selected label when value is set but not in current results */
   selectedLabel?: string
 }
@@ -20,11 +22,30 @@ interface UnitSearchSelectProps {
 /**
  * Searchable unit picker — loads at most 20 matches instead of every asset.
  */
-export function UnitSearchSelect({ resortId, value, onChange, selectedLabel }: UnitSearchSelectProps) {
+export function UnitSearchSelect({ resortId, value, onChange, onSelect, selectedLabel }: UnitSearchSelectProps) {
+  const rootRef = useRef<HTMLDivElement>(null)
   const [term, setTerm] = useState(selectedLabel ?? '')
   const [options, setOptions] = useState<UnitOption[]>([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+
+    function handlePointerDown(event: MouseEvent | TouchEvent) {
+      const target = event.target
+      if (!(target instanceof Node) || !rootRef.current?.contains(target)) {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('touchstart', handlePointerDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('touchstart', handlePointerDown)
+    }
+  }, [open])
 
   const search = useCallback(
     async (query: string) => {
@@ -61,10 +82,11 @@ export function UnitSearchSelect({ resortId, value, onChange, selectedLabel }: U
     onChange(option.id, option)
     setTerm(`${option.label} (${option.asset_type})`)
     setOpen(false)
+    onSelect?.(option)
   }
 
   return (
-    <div className="relative">
+    <div ref={rootRef} className="relative">
       <input
         type="text"
         className="w-full rounded-xl border border-[#ECECEC] bg-white px-3.5 py-2.5 text-[#1A1A1A] placeholder:text-gray-400 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"

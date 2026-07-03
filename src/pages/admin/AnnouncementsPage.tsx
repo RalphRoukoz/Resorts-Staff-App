@@ -4,6 +4,12 @@ import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
+import {
+  EXPIRY_PRESET_LABELS,
+  computeAnnouncementExpiresAt,
+  isAnnouncementExpired,
+  type AnnouncementExpiryPreset,
+} from '../../lib/announcementExpiry'
 import { formatDateTime } from '../../lib/dates'
 import { supabase } from '../../lib/supabase'
 import type { Announcement, Audience } from '../../types/database'
@@ -26,6 +32,8 @@ export function AnnouncementsPage() {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [audience, setAudience] = useState<Audience>('both')
+  const [expiryPreset, setExpiryPreset] = useState<AnnouncementExpiryPreset>('never')
+  const [customExpiresAt, setCustomExpiresAt] = useState('')
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -55,6 +63,8 @@ export function AnnouncementsPage() {
     setTitle('')
     setBody('')
     setAudience('both')
+    setExpiryPreset('never')
+    setCustomExpiresAt('')
     setPdfFile(null)
     setFormError(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -65,6 +75,16 @@ export function AnnouncementsPage() {
     if (!resortId) return
     if (!title.trim()) {
       setFormError('Title is required')
+      return
+    }
+
+    const expiresAt = computeAnnouncementExpiresAt(expiryPreset, customExpiresAt)
+    if (expiryPreset === 'custom' && !expiresAt) {
+      setFormError('Choose a valid expiry date and time')
+      return
+    }
+    if (expiresAt && new Date(expiresAt).getTime() <= Date.now()) {
+      setFormError('Expiry must be in the future')
       return
     }
 
@@ -96,6 +116,7 @@ export function AnnouncementsPage() {
       body: body.trim() || null,
       audience,
       pdf_url: pdfUrl,
+      expires_at: expiresAt,
     })
 
     if (insertError) {
@@ -140,42 +161,56 @@ export function AnnouncementsPage() {
       ) : null}
 
       <div className="space-y-3">
-        {announcements.map((item) => (
-          <div
-            key={item.id}
-            className="rounded-2xl border border-[#ECECEC] bg-white p-5 shadow-sm"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-medium text-[#1A1A1A]">{item.title}</h3>
-                  <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                    {audienceLabels[item.audience]}
-                  </span>
+        {announcements.map((item) => {
+          const expired = isAnnouncementExpired(item.expires_at)
+          return (
+            <div
+              key={item.id}
+              className="rounded-2xl border border-[#ECECEC] bg-white p-5 shadow-sm"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-lg font-medium text-[#1A1A1A]">{item.title}</h3>
+                    <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                      {audienceLabels[item.audience]}
+                    </span>
+                    {item.expires_at ? (
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          expired
+                            ? 'bg-red-50 text-red-700'
+                            : 'bg-amber-50 text-amber-800'
+                        }`}
+                      >
+                        {expired ? 'Expired' : `Expires ${formatDateTime(item.expires_at)}`}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">Posted {formatDateTime(item.created_at)}</p>
+                  {item.body ? (
+                    <p className="mt-3 whitespace-pre-wrap text-sm text-gray-600">{item.body}</p>
+                  ) : null}
+                  {item.pdf_url ? (
+                    <a
+                      href={item.pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[var(--accent)] hover:opacity-80"
+                    >
+                      View attachment (PDF)
+                    </a>
+                  ) : null}
                 </div>
-                <p className="mt-1 text-xs text-gray-400">{formatDateTime(item.created_at)}</p>
-                {item.body ? (
-                  <p className="mt-3 whitespace-pre-wrap text-sm text-gray-600">{item.body}</p>
-                ) : null}
-                {item.pdf_url ? (
-                  <a
-                    href={item.pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[var(--accent)] hover:opacity-80"
-                  >
-                    View attachment (PDF)
-                  </a>
+                {canWrite ? (
+                  <Button variant="danger" onClick={() => void handleDelete(item)}>
+                    Delete
+                  </Button>
                 ) : null}
               </div>
-              {canWrite ? (
-                <Button variant="danger" onClick={() => void handleDelete(item)}>
-                  Delete
-                </Button>
-              ) : null}
             </div>
-          </div>
-        ))}
+          )
+        })}
         {announcements.length === 0 ? (
           <p className="rounded-2xl border border-[#ECECEC] bg-white px-4 py-12 text-center text-gray-400 shadow-sm">
             No announcements yet.
@@ -225,6 +260,31 @@ export function AnnouncementsPage() {
                 <option value="cabine">Cabines only</option>
               </select>
             </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-gray-700">Auto-remove after</span>
+              <select
+                className="w-full rounded-xl border border-[#ECECEC] bg-white px-3.5 py-2.5 text-[#1A1A1A] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
+                value={expiryPreset}
+                onChange={(e) => setExpiryPreset(e.target.value as AnnouncementExpiryPreset)}
+              >
+                {(Object.keys(EXPIRY_PRESET_LABELS) as AnnouncementExpiryPreset[]).map((key) => (
+                  <option key={key} value={key}>
+                    {EXPIRY_PRESET_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1.5 text-xs text-gray-500">
+                The announcement is hidden from owners when it expires, then deleted automatically.
+              </p>
+            </label>
+            {expiryPreset === 'custom' ? (
+              <Input
+                label="Expiry date & time"
+                type="datetime-local"
+                value={customExpiresAt}
+                onChange={(e) => setCustomExpiresAt(e.target.value)}
+              />
+            ) : null}
             <div>
               <span className="mb-1.5 block text-sm font-medium text-gray-700">
                 PDF attachment (optional)

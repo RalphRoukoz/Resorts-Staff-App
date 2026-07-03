@@ -40,7 +40,7 @@ export function isValidPhone(input: string): boolean {
   return /^\d{8,15}$/.test(normalizePhone(input))
 }
 
-export const PHONE_ERROR = 'Enter a valid phone number (e.g. 79 400 020 or +961 79 400 020)'
+export const PHONE_ERROR = 'One or more phone numbers are invalid. Use 8–15 digits (local or international format).'
 
 export function parsePhoneList(input: string): string[] {
   const seen = new Set<string>()

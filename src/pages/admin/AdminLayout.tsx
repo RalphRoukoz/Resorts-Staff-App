@@ -1,41 +1,36 @@
 import type { CSSProperties } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
 import { PERMISSIONS } from '../../lib/permissions'
+import { DemoBanner } from '../../components/DemoBanner'
 
 const DEFAULT_ACCENT = '#1A1A1A'
 
 const readNavItems = [
-  { to: '/admin/units', label: 'Chalets & Cabines' },
-  { to: '/admin/rentals', label: 'Rentals' },
-  { to: '/admin/today', label: 'Today & Consumption' },
-  { to: '/admin/analytics', label: 'Analytics' },
-  { to: '/admin/announcements', label: 'Announcements' },
-]
+  { to: '/admin/units', labelKey: 'nav.units' },
+  { to: '/admin/rentals', labelKey: 'nav.rentals' },
+  { to: '/admin/today', labelKey: 'nav.today' },
+  { to: '/admin/analytics', labelKey: 'nav.analytics' },
+  { to: '/admin/announcements', labelKey: 'nav.announcements' },
+] as const
 
 const writeNavItems = [
-  { to: '/admin/reception-staff', label: 'Reception staff', permission: PERMISSIONS.STAFF_MANAGE },
-  { to: '/admin/viewers', label: 'Dashboard viewers', permission: PERMISSIONS.STAFF_MANAGE },
-  { to: '/admin/roles', label: 'Roles & permissions', permission: PERMISSIONS.STAFF_MANAGE },
-  { to: '/admin/configuration', label: 'Resort Configuration', permission: PERMISSIONS.CONFIG_WRITE },
+  { to: '/admin/staff', labelKey: 'nav.staff', permission: PERMISSIONS.STAFF_MANAGE },
+  { to: '/admin/configuration', labelKey: 'nav.configuration', permission: PERMISSIONS.CONFIG_WRITE },
 ] as const
 
 export function AdminLayout() {
-  const { resort, canWrite, hasReception, hasPermission, signOut, setView } = useAuth()
-  const navigate = useNavigate()
+  const { t } = useTranslation()
+  const { resort, canWrite, hasPermission, signOut } = useAuth()
 
   const filteredWriteNav = writeNavItems.filter((item) => hasPermission(item.permission))
-
   const navItems = [...readNavItems, ...filteredWriteNav]
 
   const accent = resort?.primary_color || DEFAULT_ACCENT
   const rootStyle = { '--accent': accent } as CSSProperties
-
-  function openScanner() {
-    setView('reception')
-    navigate('/scanner')
-  }
 
   function navLinkStyle({ isActive }: { isActive: boolean }): CSSProperties {
     return isActive ? { backgroundColor: `${accent}14`, color: accent } : {}
@@ -61,7 +56,9 @@ export function AdminLayout() {
         <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: accent }}>
           {resort?.name ?? 'Resort'}
         </p>
-        <p className="mt-0.5 text-xs text-gray-400">{canWrite ? 'Staff dashboard' : 'View-only dashboard'}</p>
+        <p className="mt-0.5 text-xs text-gray-400">
+          {canWrite ? t('app.staffDashboard') : t('app.viewOnlyDashboard')}
+        </p>
       </div>
     )
   }
@@ -71,24 +68,22 @@ export function AdminLayout() {
       <aside className="hidden w-64 shrink-0 flex-col border-r border-[#ECECEC] bg-white lg:flex">
         <div className="border-b border-[#ECECEC] px-5 py-7">
           <BrandMark />
+          <div className="mt-4">
+            <LanguageSwitcher />
+          </div>
         </div>
 
         <nav className="flex-1 space-y-0.5 p-3">
           {navItems.map((item) => (
             <NavLink key={item.to} to={item.to} className={desktopNavClass} style={navLinkStyle}>
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>
 
-        <div className="space-y-2 border-t border-[#ECECEC] p-3">
-          {hasReception ? (
-            <Button variant="secondary" fullWidth onClick={openScanner}>
-              Open scanner
-            </Button>
-          ) : null}
+        <div className="border-t border-[#ECECEC] p-3">
           <Button variant="ghost" fullWidth onClick={() => void signOut()}>
-            Sign out
+            {t('common.signOut')}
           </Button>
         </div>
       </aside>
@@ -96,14 +91,10 @@ export function AdminLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-[#ECECEC] bg-white px-4 py-3 lg:hidden">
           <BrandMark compact />
-          <div className="flex gap-2">
-            {hasReception ? (
-              <Button variant="secondary" onClick={openScanner}>
-                Scanner
-              </Button>
-            ) : null}
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
             <Button variant="ghost" onClick={() => void signOut()}>
-              Out
+              {t('common.out')}
             </Button>
           </div>
         </header>
@@ -120,13 +111,14 @@ export function AdminLayout() {
               }
               style={navLinkStyle}
             >
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>
 
         <main className="flex-1 overflow-auto">
           <div className="mx-auto w-full max-w-6xl p-4 lg:p-10">
+            <DemoBanner />
             <Outlet />
           </div>
         </main>

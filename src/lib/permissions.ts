@@ -24,10 +24,23 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'announcements.write': 'Manage announcements',
   'staff.manage': 'Manage staff accounts',
   'config.write': 'Edit resort configuration',
-  scanner: 'Use reception scanner',
+  scanner: 'Use scanner (reception & gate)',
   'units.write': 'Manage units',
   'rentals.write': 'Manage rentals',
   'analytics.read': 'View analytics',
+}
+
+export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
+  'dashboard.read': 'View Today, units, rentals, and read-only dashboard pages.',
+  'dashboard.write': 'Create and edit units, rentals, announcements, and other dashboard data.',
+  'invitations.bonus': 'Grant extra weekday/weekend invitations to a chalet for the current period.',
+  'announcements.write': 'Create, edit, and delete resort announcements.',
+  'staff.manage': 'Add staff accounts, assign roles, and reset passwords.',
+  'config.write': 'Change resort invite limits, season dates, and scanner settings.',
+  scanner: 'Scan invitation QR codes at reception and gate checkpoints.',
+  'units.write': 'Add, edit, and delete chalets and cabines.',
+  'rentals.write': 'Create and remove tenant rentals.',
+  'analytics.read': 'View validated visit analytics and guest reports.',
 }
 
 export type StaffWithRole = ResortStaff & { resort_roles?: ResortRole | null }

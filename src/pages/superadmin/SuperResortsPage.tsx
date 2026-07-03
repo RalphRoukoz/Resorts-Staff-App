@@ -5,7 +5,7 @@ import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { DAY_LABELS } from '../../lib/dates'
 import { supabase } from '../../lib/supabase'
-import type { Resort, ResortWithStats } from '../../types/database'
+import type { ResortWithStats } from '../../types/database'
 
 const DEFAULT_ACCENT = '#1A1A1A'
 const LOGO_BUCKET = 'resort-logos'
@@ -17,6 +17,9 @@ interface ResortForm {
   cabine_weekday_limit: string
   cabine_weekend_limit: string
   cabine_invites_enabled: boolean
+  cabine_paid_invites: boolean
+  chalet_double_scan: boolean
+  invitation_period_mode: 'monthly' | 'whole_period'
   weekend_days: number[]
   primary_color: string
   logo_url: string | null
@@ -29,6 +32,9 @@ const emptyForm: ResortForm = {
   cabine_weekday_limit: '8',
   cabine_weekend_limit: '3',
   cabine_invites_enabled: true,
+  cabine_paid_invites: false,
+  chalet_double_scan: false,
+  invitation_period_mode: 'monthly',
   weekend_days: [5, 6],
   primary_color: DEFAULT_ACCENT,
   logo_url: null,
@@ -67,38 +73,28 @@ export function SuperResortsPage() {
     setLoading(true)
     setError(null)
 
-    const { data, error: fetchError } = await supabase
-      .from('resorts')
-      .select('*')
-      .order('name')
+    const { data, error: fetchError } = await supabase.rpc('super_resorts_with_stats')
 
     if (fetchError) {
       setError(fetchError.message)
+      setResorts([])
       setLoading(false)
       return
     }
 
-    const withStats: ResortWithStats[] = await Promise.all(
-      ((data ?? []) as Resort[]).map(async (resort) => {
-        const [chaletsResult, invitesResult] = await Promise.all([
-          supabase
-            .from('assets')
-            .select('*', { count: 'exact', head: true })
-            .eq('resort_id', resort.id),
-          supabase
-            .from('invitations')
-            .select('*, assets!inner(resort_id)', { count: 'exact', head: true })
-            .eq('assets.resort_id', resort.id),
-        ])
-        return {
-          ...resort,
-          chalet_count: chaletsResult.count ?? 0,
-          invitation_count: invitesResult.count ?? 0,
-        }
-      }),
-    )
+    const payload = data as ResortWithStats[] | { error?: string }
+    if (!Array.isArray(payload)) {
+      if (payload?.error === 'NOT_AUTHORIZED') {
+        setError('You do not have permission to view resorts.')
+      } else {
+        setError('Failed to load resorts.')
+      }
+      setResorts([])
+      setLoading(false)
+      return
+    }
 
-    setResorts(withStats)
+    setResorts(payload)
     setLoading(false)
   }, [])
 
@@ -124,6 +120,9 @@ export function SuperResortsPage() {
       cabine_weekday_limit: String(resort.cabine_weekday_limit),
       cabine_weekend_limit: String(resort.cabine_weekend_limit),
       cabine_invites_enabled: resort.cabine_invites_enabled,
+      cabine_paid_invites: resort.cabine_paid_invites ?? false,
+      chalet_double_scan: resort.chalet_double_scan ?? false,
+      invitation_period_mode: resort.invitation_period_mode ?? 'monthly',
       weekend_days: [...resort.weekend_days],
       primary_color: resort.primary_color || DEFAULT_ACCENT,
       logo_url: resort.logo_url,
@@ -170,6 +169,9 @@ export function SuperResortsPage() {
       cabine_weekday_limit: Number(form.cabine_weekday_limit),
       cabine_weekend_limit: Number(form.cabine_weekend_limit),
       cabine_invites_enabled: form.cabine_invites_enabled,
+      cabine_paid_invites: form.cabine_paid_invites,
+      chalet_double_scan: form.chalet_double_scan,
+      invitation_period_mode: form.invitation_period_mode,
       weekend_days: form.weekend_days,
       primary_color: form.primary_color,
       logo_url: nextLogoUrl,
@@ -328,6 +330,36 @@ export function SuperResortsPage() {
                 <span className="block text-sm font-medium text-[#1A1A1A]">Allow cabine invitations</span>
                 <span className="mt-0.5 block text-sm text-gray-500">
                   Cabine owners and tenants can issue guest invitations when enabled.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-4 py-3">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-gray-300"
+                checked={form.cabine_paid_invites}
+                onChange={(e) => setForm({ ...form, cabine_paid_invites: e.target.checked })}
+              />
+              <span>
+                <span className="block text-sm font-medium text-[#1A1A1A]">Cabine paid invitations</span>
+                <span className="mt-0.5 block text-sm text-gray-500">
+                  Require payment at reception before gate entry for cabine guests.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-4 py-3">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-gray-300"
+                checked={form.chalet_double_scan}
+                onChange={(e) => setForm({ ...form, chalet_double_scan: e.target.checked })}
+              />
+              <span>
+                <span className="block text-sm font-medium text-[#1A1A1A]">Chalet double scan</span>
+                <span className="mt-0.5 block text-sm text-gray-500">
+                  Reception scan required before gate entry for chalet guests.
                 </span>
               </span>
             </label>

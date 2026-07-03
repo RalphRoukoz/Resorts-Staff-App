@@ -4,6 +4,13 @@ import { todayISO } from '../../lib/dates'
 import { supabase } from '../../lib/supabase'
 
 interface PlatformStats {
+  resort_count: number
+  chalet_count: number
+  invitations_this_month: number
+  check_ins_this_month: number
+}
+
+interface PlatformStatsView {
   resortCount: number
   chaletCount: number
   invitationsThisMonth: number
@@ -20,7 +27,7 @@ function StatCard({ label, value }: { label: string; value: number }) {
 }
 
 export function SuperOverviewPage() {
-  const [stats, setStats] = useState<PlatformStats | null>(null)
+  const [stats, setStats] = useState<PlatformStatsView | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -32,37 +39,28 @@ export function SuperOverviewPage() {
       const today = todayISO()
       const monthStart = `${today.slice(0, 7)}-01`
 
-      const [resortResult, chaletResult, invitesResult, checkInsResult] = await Promise.all([
-        supabase.from('resorts').select('*', { count: 'exact', head: true }),
-        supabase.from('assets').select('*', { count: 'exact', head: true }),
-        supabase
-          .from('invitations')
-          .select('*', { count: 'exact', head: true })
-          .gte('visit_date', monthStart),
-        supabase
-          .from('invitations')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'validated')
-          .gte('validated_at', `${monthStart}T00:00:00`),
-      ])
+      const { data, error: rpcError } = await supabase.rpc('platform_overview_stats', {
+        p_month_start: monthStart,
+      })
 
-      const firstError =
-        resortResult.error ??
-        chaletResult.error ??
-        invitesResult.error ??
-        checkInsResult.error
+      if (rpcError) {
+        setError(rpcError.message)
+        setLoading(false)
+        return
+      }
 
-      if (firstError) {
-        setError(firstError.message)
+      const row = data as PlatformStats & { error?: string; month_start?: string }
+      if (row.error) {
+        setError(row.error === 'NOT_AUTHORIZED' ? 'You do not have permission to view overview.' : row.error)
         setLoading(false)
         return
       }
 
       setStats({
-        resortCount: resortResult.count ?? 0,
-        chaletCount: chaletResult.count ?? 0,
-        invitationsThisMonth: invitesResult.count ?? 0,
-        checkInsThisMonth: checkInsResult.count ?? 0,
+        resortCount: row.resort_count ?? 0,
+        chaletCount: row.chalet_count ?? 0,
+        invitationsThisMonth: row.invitations_this_month ?? 0,
+        checkInsThisMonth: row.check_ins_this_month ?? 0,
       })
       setLoading(false)
     }
