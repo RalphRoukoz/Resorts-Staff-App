@@ -38,25 +38,20 @@ export async function scanInvitation(
   }
 }
 
-/** Legacy single-step validation when scan_invitation is unavailable. */
-export async function validateInvitationLegacy(token: string): Promise<ValidateResult> {
-  const { data, error } = await supabase.rpc('validate_invitation', { p_token: token })
-  if (error) return { ok: false, reason: error.message }
-  return data as ValidateResult
-}
-
 export async function scanOrValidate(
   token: string,
   checkpoint: ScanCheckpoint,
 ): Promise<ValidateResult> {
   const result = await scanInvitation(token, checkpoint)
-  // Simple-flow resorts: reception desk may scan when no reception step is configured.
+
+  // Back-compat: older scan_invitation returned RECEPTION_NOT_REQUIRED for chalet single-scan.
   if (
     !result.ok &&
     result.reason === 'RECEPTION_NOT_REQUIRED' &&
     checkpoint === 'reception'
   ) {
-    return validateInvitationLegacy(token)
+    return scanInvitation(token, 'gate')
   }
+
   return result
 }

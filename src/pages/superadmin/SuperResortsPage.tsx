@@ -344,7 +344,7 @@ export function SuperResortsPage() {
               <span>
                 <span className="block text-sm font-medium text-[#1A1A1A]">Cabine paid invitations</span>
                 <span className="mt-0.5 block text-sm text-gray-500">
-                  Require payment at reception before gate entry for cabine guests.
+                  Cabines always scan at reception then gate. When enabled, reception confirms payment before gate entry.
                 </span>
               </span>
             </label>
@@ -359,7 +359,7 @@ export function SuperResortsPage() {
               <span>
                 <span className="block text-sm font-medium text-[#1A1A1A]">Chalet double scan</span>
                 <span className="mt-0.5 block text-sm text-gray-500">
-                  Reception scan required before gate entry for chalet guests.
+                  When on: reception then gate. When off: one scan at either checkpoint validates.
                 </span>
               </span>
             </label>

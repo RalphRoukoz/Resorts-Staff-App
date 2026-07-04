@@ -51,6 +51,14 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
       await stopScanner()
 
       const token = extractInvitationToken(decodedText)
+      if (!token) {
+        setResult({ ok: false, reason: 'EMPTY_TOKEN' })
+        setPhase('result')
+        setProcessing(false)
+        processingRef.current = false
+        playError()
+        return
+      }
       const finalResult = await scanOrValidate(token, checkpoint)
 
       if (finalResult.ok) playSuccess()
@@ -220,7 +228,12 @@ function FailureMessage({
         </>
       )
     case 'NOT_FOUND':
+    case 'EMPTY_TOKEN':
       return <p className="text-2xl font-semibold">{t('scanner.invalidCode')}</p>
+    case 'CANCELLED':
+      return <p className="text-2xl font-semibold">{t('scanner.cancelled')}</p>
+    case 'ALREADY_SCANNED_RECEPTION':
+      return <p className="text-2xl font-semibold">{t('scanner.alreadyScannedReception')}</p>
     case 'NOT_AUTHORIZED':
       return <p className="text-2xl font-semibold">{t('scanner.notAuthorized')}</p>
     case 'RECEPTION_REQUIRED_FIRST':
