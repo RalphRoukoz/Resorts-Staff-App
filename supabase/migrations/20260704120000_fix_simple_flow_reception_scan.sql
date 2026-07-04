@@ -4,7 +4,7 @@
 --   Cabine (always)        → reception, then gate (payment marked at reception when cabine_paid_invites)
 
 CREATE OR REPLACE FUNCTION public.scan_invitation(
-  p_token text,
+  p_token uuid,
   p_checkpoint text
 )
 RETURNS jsonb

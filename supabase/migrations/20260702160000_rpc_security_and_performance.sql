@@ -62,7 +62,7 @@ $$;
 -- scan_invitation: require scanner permission (not just staff membership)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.scan_invitation(
-  p_token text,
+  p_token uuid,
   p_checkpoint text
 )
 RETURNS jsonb

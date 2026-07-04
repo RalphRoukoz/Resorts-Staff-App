@@ -73,7 +73,7 @@ GRANT EXECUTE ON FUNCTION public.check_owner_login_eligible(text) TO anon, authe
 -- Phase 3: Stage-aware scan (reception / gate)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.scan_invitation(
-  p_token text,
+  p_token uuid,
   p_checkpoint text
 )
 RETURNS jsonb
