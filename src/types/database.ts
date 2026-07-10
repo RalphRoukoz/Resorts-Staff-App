@@ -50,7 +50,6 @@ export interface Asset {
   id: string
   resort_id: string
   label: string
-  owner_phone: string
   owner_phones: string[]
   owner_first_name: string | null
   owner_last_name: string | null

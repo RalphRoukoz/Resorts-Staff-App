@@ -61,7 +61,7 @@ export function UnitSearchSelect({ resortId, value, onChange, onSelect, selected
 
       const trimmed = query.trim()
       if (trimmed) {
-        const filters = [`label.ilike.%${trimmed}%`, `owner_phone.ilike.%${trimmed}%`]
+        const filters = [`label.ilike.%${trimmed}%`]
         const normalized = normalizePhone(trimmed)
         if (normalized) filters.push(`owner_phones.cs.{${normalized}}`)
         q = q.or(filters.join(','))

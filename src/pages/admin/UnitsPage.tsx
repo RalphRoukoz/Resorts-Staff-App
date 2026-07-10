@@ -193,7 +193,6 @@ export function UnitsPage() {
     if (trimmed) {
       const filters = [
         `label.ilike.%${trimmed}%`,
-        `owner_phone.ilike.%${trimmed}%`,
         `owner_first_name.ilike.%${trimmed}%`,
         `owner_last_name.ilike.%${trimmed}%`,
       ]
@@ -241,7 +240,7 @@ export function UnitsPage() {
       label: unit.label,
       owner_first_name: unit.owner_first_name ?? '',
       owner_last_name: unit.owner_last_name ?? '',
-      owner_phones_text: (unit.owner_phones?.length ? unit.owner_phones : [unit.owner_phone]).join('\n'),
+      owner_phones_text: (unit.owner_phones ?? []).join('\n'),
       asset_type: unit.asset_type,
     })
     setFormError(null)
@@ -290,7 +289,6 @@ export function UnitsPage() {
       label: form.label.trim(),
       owner_first_name: form.owner_first_name.trim() || null,
       owner_last_name: form.owner_last_name.trim() || null,
-      owner_phone: ownerPhones[0],
       owner_phones: ownerPhones,
       asset_type: form.asset_type,
       weekday_limit: editing?.weekday_limit ?? defaults.weekday_limit,
@@ -574,7 +572,7 @@ export function UnitsPage() {
                 placeholder={'One phone per line\n70123456\n+96170123457'}
               />
             </label>
-            <p className="text-sm text-gray-500">The first number becomes the primary phone for compatibility with existing flows.</p>
+              <p className="text-sm text-gray-500">Add every owner phone that should access this unit. One number per line.</p>
             <p className="text-sm text-gray-500">
               Monthly invite limits come from resort defaults
               {resort ? ` (${resort.chalet_weekday_limit} weekday / ${resort.chalet_weekend_limit} weekend for chalets).` : '.'}
