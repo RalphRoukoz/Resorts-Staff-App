@@ -83,6 +83,8 @@
     "ownerFirstName": "الاسم الأول للمالك",
     "ownerLastName": "اسم عائلة المالك",
     "ownerPhones": "هواتف المالك",
+    "allowMultipleLogins": "السماح بتسجيلات دخول متعددة",
+    "allowMultipleLoginsHint": "عند الإيقاف (الافتراضي)، يمكن لجهاز واحد فقط البقاء مسجّلاً برقم المالك. تسجيل دخول جديد يُخرج الجهاز السابق.",
     "noOwnerName": "—",
     "addInvites": "إضافة دعوات",
     "allowanceUnavailable": "—",

@@ -56,6 +56,8 @@ export interface Asset {
   asset_type: AssetType
   weekday_limit: number | null
   weekend_limit: number | null
+  /** When false (default), only one owner-app device may stay signed in per owner phone. */
+  allow_multiple_logins: boolean
   created_at: string
 }
 

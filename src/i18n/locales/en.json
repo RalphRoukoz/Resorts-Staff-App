@@ -83,6 +83,8 @@
     "ownerFirstName": "Owner first name",
     "ownerLastName": "Owner last name",
     "ownerPhones": "Owner phones",
+    "allowMultipleLogins": "Allow multiple logins",
+    "allowMultipleLoginsHint": "When off (default), only one device can stay signed in with an owner phone for this unit. A new login signs out the previous device.",
     "noOwnerName": "—",
     "addInvites": "Add invites",
     "allowanceUnavailable": "—",

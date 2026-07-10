@@ -83,6 +83,8 @@
     "ownerFirstName": "Prénom du propriétaire",
     "ownerLastName": "Nom du propriétaire",
     "ownerPhones": "Téléphones propriétaire",
+    "allowMultipleLogins": "Autoriser plusieurs connexions",
+    "allowMultipleLoginsHint": "Désactivé par défaut : un seul appareil peut rester connecté avec un numéro propriétaire. Une nouvelle connexion déconnecte l'appareil précédent.",
     "noOwnerName": "—",
     "addInvites": "Ajouter des invitations",
     "allowanceUnavailable": "—",

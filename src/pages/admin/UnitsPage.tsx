@@ -20,6 +20,7 @@ interface UnitForm {
   owner_last_name: string
   owner_phones_text: string
   asset_type: AssetType
+  allow_multiple_logins: boolean
 }
 
 const emptyForm: UnitForm = {
@@ -28,6 +29,7 @@ const emptyForm: UnitForm = {
   owner_last_name: '',
   owner_phones_text: '',
   asset_type: 'chalet',
+  allow_multiple_logins: false,
 }
 
 function unitSupportsBonusInvites(unit: Asset, resort: Resort | null): boolean {
@@ -242,6 +244,7 @@ export function UnitsPage() {
       owner_last_name: unit.owner_last_name ?? '',
       owner_phones_text: (unit.owner_phones ?? []).join('\n'),
       asset_type: unit.asset_type,
+      allow_multiple_logins: unit.allow_multiple_logins ?? false,
     })
     setFormError(null)
     setModalOpen(true)
@@ -291,6 +294,7 @@ export function UnitsPage() {
       owner_last_name: form.owner_last_name.trim() || null,
       owner_phones: ownerPhones,
       asset_type: form.asset_type,
+      allow_multiple_logins: form.allow_multiple_logins,
       weekday_limit: editing?.weekday_limit ?? defaults.weekday_limit,
       weekend_limit: editing?.weekend_limit ?? defaults.weekend_limit,
     }
@@ -572,7 +576,19 @@ export function UnitsPage() {
                 placeholder={'One phone per line\n70123456\n+96170123457'}
               />
             </label>
-              <p className="text-sm text-gray-500">Add every owner phone that should access this unit. One number per line.</p>
+            <p className="text-sm text-gray-500">Add every owner phone that should access this unit. One number per line.</p>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-4 py-3">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-gray-300"
+                checked={form.allow_multiple_logins}
+                onChange={(e) => setForm({ ...form, allow_multiple_logins: e.target.checked })}
+              />
+              <span>
+                <span className="block text-sm font-medium text-[#1A1A1A]">{t('units.allowMultipleLogins')}</span>
+                <span className="mt-0.5 block text-sm text-gray-500">{t('units.allowMultipleLoginsHint')}</span>
+              </span>
+            </label>
             <p className="text-sm text-gray-500">
               Monthly invite limits come from resort defaults
               {resort ? ` (${resort.chalet_weekday_limit} weekday / ${resort.chalet_weekend_limit} weekend for chalets).` : '.'}
