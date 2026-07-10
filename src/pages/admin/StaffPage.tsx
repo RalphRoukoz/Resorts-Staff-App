@@ -18,14 +18,17 @@ import type { ResortRole, ResortStaff, StaffRole } from '../../types/database'
 type StaffWithRole = ResortStaff & { resort_roles?: ResortRole | null }
 
 type RoleChoice =
-  | { kind: 'preset'; role: 'admin' | 'reception' | 'viewer' }
+  | { kind: 'preset'; role: 'admin' | 'viewer' | 'reception' }
+  | { kind: 'system'; roleId: string }
   | { kind: 'custom'; roleId: string }
 
-const PRESET_LABELS: Record<'admin' | 'reception' | 'viewer', string> = {
+const PRESET_LABELS: Record<'admin' | 'viewer' | 'reception', string> = {
   admin: 'Full admin',
-  reception: 'Scanner (reception & gate)',
   viewer: 'Viewer (read-only)',
+  reception: 'Scanner (reception & gate) — legacy',
 }
+
+const SYSTEM_SCANNER_NAMES = ['Reception scanner', 'Gate scanner'] as const
 
 function generatePassword(length = 12): string {
   const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -39,18 +42,23 @@ function generatePassword(length = 12): string {
 function roleLabel(row: StaffWithRole): string {
   if (row.resort_roles?.name) return row.resort_roles.name
   if (row.role === 'admin') return PRESET_LABELS.admin
-  if (row.role === 'reception') return PRESET_LABELS.reception
   if (row.role === 'viewer') return PRESET_LABELS.viewer
+  if (row.role === 'reception') return 'Scanner (reception & gate)'
   return row.role
 }
 
 function choiceKey(choice: RoleChoice): string {
-  return choice.kind === 'preset' ? `preset:${choice.role}` : `custom:${choice.roleId}`
+  if (choice.kind === 'preset') return `preset:${choice.role}`
+  if (choice.kind === 'system') return `system:${choice.roleId}`
+  return `custom:${choice.roleId}`
 }
 
 function choiceFromStaff(row: StaffWithRole): RoleChoice {
+  if (row.resort_role_id && row.resort_roles?.is_system) {
+    return { kind: 'system', roleId: row.resort_role_id }
+  }
   if (row.resort_role_id) return { kind: 'custom', roleId: row.resort_role_id }
-  if (row.role === 'admin' || row.role === 'reception' || row.role === 'viewer') {
+  if (row.role === 'admin' || row.role === 'viewer' || row.role === 'reception') {
     return { kind: 'preset', role: row.role }
   }
   return { kind: 'preset', role: 'viewer' }
@@ -68,7 +76,7 @@ export function StaffPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [roleChoice, setRoleChoice] = useState<RoleChoice>({ kind: 'preset', role: 'reception' })
+  const [roleChoice, setRoleChoice] = useState<RoleChoice>({ kind: 'preset', role: 'viewer' })
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [credentials, setCredentials] = useState<{ username: string; password: string } | null>(null)
@@ -86,6 +94,9 @@ export function StaffPage() {
   const [roleSaving, setRoleSaving] = useState(false)
 
   const customRoles = roles.filter((r) => !r.is_owner && !r.is_system)
+  const systemScannerRoles = SYSTEM_SCANNER_NAMES.map(
+    (name) => roles.find((r) => r.is_system && r.name === name) ?? null,
+  ).filter((r): r is ResortRole => r != null)
 
   const loadData = useCallback(async () => {
     if (!resortId) {
@@ -128,7 +139,11 @@ export function StaffPage() {
   function openCreate() {
     setUsername('')
     setPassword(generatePassword())
-    setRoleChoice({ kind: 'preset', role: 'reception' })
+    setRoleChoice(
+      systemScannerRoles[0]
+        ? { kind: 'system', roleId: systemScannerRoles[0].id }
+        : { kind: 'preset', role: 'reception' },
+    )
     setFormError(null)
     setCreateOpen(true)
   }
@@ -158,7 +173,11 @@ export function StaffPage() {
     setFormError(null)
 
     const legacyRole: 'admin' | 'reception' | 'viewer' =
-      roleChoice.kind === 'preset' ? roleChoice.role : 'viewer'
+      roleChoice.kind === 'preset'
+        ? roleChoice.role
+        : roleChoice.kind === 'system'
+          ? 'reception'
+          : 'viewer'
 
     const result = await createStaffAccount({
       username: username.trim(),
@@ -360,8 +379,13 @@ export function StaffPage() {
                         onChange={(e) => {
                           const value = e.target.value
                           if (value.startsWith('preset:')) {
-                            const role = value.replace('preset:', '') as 'admin' | 'reception' | 'viewer'
+                            const role = value.replace('preset:', '') as 'admin' | 'viewer' | 'reception'
                             void handleRoleChange(row, { kind: 'preset', role })
+                          } else if (value.startsWith('system:')) {
+                            void handleRoleChange(row, {
+                              kind: 'system',
+                              roleId: value.replace('system:', ''),
+                            })
                           } else if (value.startsWith('custom:')) {
                             void handleRoleChange(row, { kind: 'custom', roleId: value.replace('custom:', '') })
                           }
@@ -369,8 +393,18 @@ export function StaffPage() {
                       >
                         <optgroup label={t('staff.presetRoles')}>
                           <option value="preset:admin">{PRESET_LABELS.admin}</option>
-                          <option value="preset:reception">{PRESET_LABELS.reception}</option>
+                          {systemScannerRoles.map((role) => (
+                            <option key={role.id} value={`system:${role.id}`}>
+                              {role.name}
+                            </option>
+                          ))}
                           <option value="preset:viewer">{PRESET_LABELS.viewer}</option>
+                          {(() => {
+                            const current = choiceFromStaff(row)
+                            return current.kind === 'preset' && current.role === 'reception' ? (
+                              <option value="preset:reception">{PRESET_LABELS.reception}</option>
+                            ) : null
+                          })()}
                         </optgroup>
                         {customRoles.length > 0 ? (
                           <optgroup label={t('staff.customRoles')}>
@@ -510,7 +544,12 @@ export function StaffPage() {
                 onChange={(e) => {
                   const value = e.target.value
                   if (value.startsWith('preset:')) {
-                    setRoleChoice({ kind: 'preset', role: value.replace('preset:', '') as 'admin' | 'reception' | 'viewer' })
+                    setRoleChoice({
+                      kind: 'preset',
+                      role: value.replace('preset:', '') as 'admin' | 'viewer' | 'reception',
+                    })
+                  } else if (value.startsWith('system:')) {
+                    setRoleChoice({ kind: 'system', roleId: value.replace('system:', '') })
                   } else if (value.startsWith('custom:')) {
                     setRoleChoice({ kind: 'custom', roleId: value.replace('custom:', '') })
                   }
@@ -518,7 +557,11 @@ export function StaffPage() {
               >
                 <optgroup label={t('staff.presetRoles')}>
                   <option value="preset:admin">{PRESET_LABELS.admin}</option>
-                  <option value="preset:reception">{PRESET_LABELS.reception}</option>
+                  {systemScannerRoles.map((role) => (
+                    <option key={role.id} value={`system:${role.id}`}>
+                      {role.name}
+                    </option>
+                  ))}
                   <option value="preset:viewer">{PRESET_LABELS.viewer}</option>
                 </optgroup>
                 {customRoles.length > 0 ? (

@@ -21,7 +21,8 @@ import { SuperResortAdminsPage } from './pages/superadmin/SuperResortAdminsPage'
 import { SuperResortsPage } from './pages/superadmin/SuperResortsPage'
 
 function RootRedirect() {
-  const { isSuperAdmin, hasDashboard, hasReception, view } = useAuth()
+  const { isSuperAdmin, hasDashboard, hasReception, hasScannerReception, hasScannerGate, view } =
+    useAuth()
 
   if (isSuperAdmin) {
     return <Navigate to="/superadmin/overview" replace />
@@ -32,6 +33,8 @@ function RootRedirect() {
   }
 
   if (hasReception) {
+    if (hasScannerReception) return <Navigate to="/scanner" replace />
+    if (hasScannerGate) return <Navigate to="/scanner/gate" replace />
     return <Navigate to="/scanner" replace />
   }
 
@@ -57,10 +60,9 @@ function RequireSuperAdmin() {
 /** Resort dashboard: full admin or read-only viewer */
 function RequireDashboard() {
   const { hasDashboard } = useAuth()
-  if (!hasDashboard) return <Navigate to="/scanner" replace />
+  if (!hasDashboard) return <Navigate to="/" replace />
   return <Outlet />
 }
-
 
 function RequirePermission({ permission }: { permission: Permission }) {
   const { hasPermission } = useAuth()
@@ -71,6 +73,19 @@ function RequirePermission({ permission }: { permission: Permission }) {
 function RequireReception() {
   const { hasReception } = useAuth()
   if (!hasReception) return <Navigate to="/admin/units" replace />
+  return <Outlet />
+}
+
+function RequireScannerCheckpoint({
+  permission,
+  fallback,
+}: {
+  permission: Permission
+  fallback: string
+}) {
+  const { hasPermission, hasReception } = useAuth()
+  if (!hasReception) return <Navigate to="/admin/units" replace />
+  if (!hasPermission(permission)) return <Navigate to={fallback} replace />
   return <Outlet />
 }
 
@@ -141,8 +156,26 @@ export default function App() {
           </RequireAuth>
         }
       >
-        <Route index element={<ReceptionScanner />} />
-        <Route path="gate" element={<GateScanner />} />
+        <Route
+          element={
+            <RequireScannerCheckpoint
+              permission={PERMISSIONS.SCANNER_RECEPTION}
+              fallback="/scanner/gate"
+            />
+          }
+        >
+          <Route index element={<ReceptionScanner />} />
+        </Route>
+        <Route
+          element={
+            <RequireScannerCheckpoint
+              permission={PERMISSIONS.SCANNER_GATE}
+              fallback="/scanner"
+            />
+          }
+        >
+          <Route path="gate" element={<GateScanner />} />
+        </Route>
       </Route>
 
       <Route path="/" element={<RootRedirect />} />

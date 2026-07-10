@@ -22,7 +22,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
             key={code}
             type="button"
             onClick={() => void i18n.changeLanguage(code)}
-            className={`min-w-[2.25rem] rounded-md px-2 py-1 text-xs font-semibold transition ${
+            className={`min-h-9 min-w-9 touch-manipulation rounded-md px-2.5 py-1.5 text-xs font-semibold transition sm:min-h-0 sm:min-w-[2.25rem] sm:px-2 sm:py-1 ${
               active ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'
             }`}
           >

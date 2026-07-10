@@ -1,6 +1,6 @@
 // Phone handling for the staff app.
 //
-// Stored / RPC format: E.164 DIGITS WITH NO LEADING "+" (e.g. 96179400020).
+// Stored / RPC format: E.164 DIGITS WITH NO LEADING "+" (e.g. 96170123456).
 // This matches how Supabase Auth stores OTP phone numbers, so the values line
 // up across invitations, tenancies, assets, and the auth.users table.
 //

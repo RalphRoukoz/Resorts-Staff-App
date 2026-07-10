@@ -571,7 +571,7 @@ export function UnitsPage() {
                 className="min-h-28 w-full rounded-xl border border-[#ECECEC] bg-white px-3.5 py-2.5 text-[#1A1A1A] placeholder:text-gray-400 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
                 value={form.owner_phones_text}
                 onChange={(event) => setForm({ ...form, owner_phones_text: event.target.value })}
-                placeholder={'One phone per line\n79400020\n+96179400021'}
+                placeholder={'One phone per line\n70123456\n+96170123457'}
               />
             </label>
             <p className="text-sm text-gray-500">The first number becomes the primary phone for compatibility with existing flows.</p>

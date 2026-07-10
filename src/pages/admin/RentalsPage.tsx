@@ -229,7 +229,7 @@ export function RentalsPage() {
               label="Tenant phone"
               value={form.tenant_phone}
               onChange={(event) => setForm({ ...form, tenant_phone: event.target.value })}
-              placeholder="79400020 or +96179400020"
+              placeholder="70123456 or +96170123456"
             />
             <Input
               label="Start date"

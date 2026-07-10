@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Html5Qrcode } from 'html5-qrcode'
+import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, formatDateTime } from '../../lib/dates'
+import { PERMISSIONS } from '../../lib/permissions'
 import { playError, playSuccess, primeAudio } from '../../lib/sound'
 import { scanOrValidate } from '../../lib/scanInvitation'
 import { extractInvitationToken } from '../../lib/token'
@@ -16,9 +18,26 @@ interface InvitationScannerProps {
   checkpoint: ScanCheckpoint
 }
 
+function resultBackground(result: ValidateResult): string {
+  if (!result.ok) {
+    if (result.reason === 'RECEPTION_REQUIRED_FIRST') return 'bg-orange-500'
+    return 'bg-rose-700'
+  }
+  // Dual-scan first checkpoint (reception) → yellow; final validation → green
+  if (result.next_checkpoint || result.final === false) return 'bg-amber-400'
+  return 'bg-emerald-600'
+}
+
+function resultTextClass(result: ValidateResult): string {
+  if (result.ok && (result.next_checkpoint || result.final === false)) {
+    return 'text-[#1A1A1A]'
+  }
+  return 'text-white'
+}
+
 export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
   const { t } = useTranslation()
-  const { signOut, hasDashboard, setView } = useAuth()
+  const { signOut, hasDashboard, hasPermission, setView } = useAuth()
   const navigate = useNavigate()
   const [phase, setPhase] = useState<ScannerPhase>('scanning')
   const [result, setResult] = useState<ValidateResult | null>(null)
@@ -27,9 +46,13 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const processingRef = useRef(false)
 
+  const canReception = hasPermission(PERMISSIONS.SCANNER_RECEPTION)
+  const canGate = hasPermission(PERMISSIONS.SCANNER_GATE)
   const title = checkpoint === 'reception' ? t('scanner.reception') : t('scanner.gate')
   const otherPath = checkpoint === 'reception' ? '/scanner/gate' : '/scanner'
   const otherLabel = checkpoint === 'reception' ? t('scanner.gate') : t('scanner.reception')
+  const canSwitchCheckpoint =
+    checkpoint === 'reception' ? canGate : canReception
 
   const stopScanner = useCallback(async () => {
     const scanner = scannerRef.current
@@ -113,17 +136,30 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
   }
 
   if (phase === 'result' && result) {
+    const bg = resultBackground(result)
+    const text = resultTextClass(result)
+    const ghostBtn =
+      text === 'text-white'
+        ? '!text-white hover:!bg-white/10'
+        : '!text-[#1A1A1A] hover:!bg-black/5'
+    const primaryBtn =
+      text === 'text-white'
+        ? '!bg-white !py-4 !text-lg !font-bold !text-[#1A1A1A] hover:!bg-gray-100'
+        : '!bg-[#1A1A1A] !py-4 !text-lg !font-bold !text-white hover:!bg-black'
+
     return (
-      <div className={`flex min-h-screen flex-col ${result.ok ? 'bg-emerald-600' : 'bg-rose-700'}`}>
-        <div className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center text-white">
+      <div className={`flex min-h-dvh flex-col ${bg}`}>
+        <div className={`flex flex-1 flex-col items-center justify-center px-6 py-10 text-center ${text}`}>
           {result.ok ? (
             <>
               <div className="mb-6 text-7xl">✓</div>
-              <h1 className="text-3xl font-bold">{t('scanner.valid')}</h1>
+              <h1 className="text-3xl font-bold">
+                {result.next_checkpoint || result.final === false
+                  ? t('scanner.validPartial')
+                  : t('scanner.valid')}
+              </h1>
               {result.next_checkpoint ? (
-                <p className="mt-4 text-lg opacity-90">
-                  {checkpoint === 'reception' ? t('scanner.gate') : ''}
-                </p>
+                <p className="mt-4 text-lg opacity-90">{t('scanner.proceedToGate')}</p>
               ) : null}
               <div className="mt-8 space-y-3 text-xl">
                 <p>{result.invitee}</p>
@@ -134,8 +170,14 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
             </>
           ) : (
             <>
-              <div className="mb-6 text-7xl">✕</div>
-              <h1 className="text-3xl font-bold">{t('scanner.invalid')}</h1>
+              <div className="mb-6 text-7xl">
+                {result.reason === 'RECEPTION_REQUIRED_FIRST' ? '!' : '✕'}
+              </div>
+              <h1 className="text-3xl font-bold">
+                {result.reason === 'RECEPTION_REQUIRED_FIRST'
+                  ? t('scanner.outOfOrder')
+                  : t('scanner.invalid')}
+              </h1>
               <div className="mt-8 space-y-3 text-lg">
                 <FailureMessage result={result} t={t} />
               </div>
@@ -143,20 +185,16 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
           )}
         </div>
 
-        <div className="space-y-3 p-4 pb-8">
-          <Button
-            fullWidth
-            className="!bg-white !py-4 !text-lg !font-bold !text-[#1A1A1A] hover:!bg-gray-100"
-            onClick={scanNext}
-          >
+        <div className="space-y-3 p-4 pb-[max(2rem,env(safe-area-inset-bottom))]">
+          <Button fullWidth className={primaryBtn} onClick={scanNext}>
             {t('scanner.scanNext')}
           </Button>
           {hasDashboard ? (
-            <Button fullWidth variant="ghost" className="!text-white hover:!bg-white/10" onClick={backToAdmin}>
+            <Button fullWidth variant="ghost" className={ghostBtn} onClick={backToAdmin}>
               {t('common.backToDashboard')}
             </Button>
           ) : (
-            <Button fullWidth variant="ghost" className="!text-white hover:!bg-white/10" onClick={() => void signOut()}>
+            <Button fullWidth variant="ghost" className={ghostBtn} onClick={() => void signOut()}>
               {t('common.signOut')}
             </Button>
           )}
@@ -166,16 +204,19 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#FAFAFA]">
-      <header className="flex items-center justify-between border-b border-[#ECECEC] bg-white px-4 py-3">
+    <div className="flex min-h-dvh flex-col bg-[#FAFAFA]">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[#ECECEC] bg-white px-3 py-3 sm:px-4">
         <p className="text-sm font-semibold text-[#1A1A1A]">{title}</p>
-        <div className="flex items-center gap-3">
-          <Link
-            to={otherPath}
-            className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 hover:text-[#1A1A1A]"
-          >
-            {otherLabel}
-          </Link>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <LanguageSwitcher />
+          {canSwitchCheckpoint ? (
+            <Link
+              to={otherPath}
+              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 hover:text-[#1A1A1A]"
+            >
+              {otherLabel}
+            </Link>
+          ) : null}
           {hasDashboard ? (
             <button type="button" onClick={backToAdmin} className="text-sm text-gray-500 hover:text-[#1A1A1A]">
               {t('common.dashboard')}
@@ -237,7 +278,13 @@ function FailureMessage({
     case 'NOT_AUTHORIZED':
       return <p className="text-2xl font-semibold">{t('scanner.notAuthorized')}</p>
     case 'RECEPTION_REQUIRED_FIRST':
-      return <p className="text-2xl font-semibold">{t('scanner.receptionRequired')}</p>
+      return (
+        <>
+          <p className="text-2xl font-semibold">{t('scanner.receptionRequired')}</p>
+          {result.invitee ? <p>{result.invitee}</p> : null}
+          {result.chalet ? <p>{result.chalet}</p> : null}
+        </>
+      )
     case 'PAYMENT_REQUIRED':
       return <p className="text-2xl font-semibold">{t('scanner.paymentRequired')}</p>
     default:

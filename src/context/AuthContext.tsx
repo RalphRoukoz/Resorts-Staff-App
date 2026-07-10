@@ -14,6 +14,7 @@ import {
   type Permission,
   type StaffWithRole,
   permissionsForStaff,
+  staffHasAnyScanner,
   staffHasPermission,
 } from '../lib/permissions'
 import { supabase } from '../lib/supabase'
@@ -33,6 +34,8 @@ interface AuthContextValue {
   canWrite: boolean
   hasDashboard: boolean
   hasReception: boolean
+  hasScannerReception: boolean
+  hasScannerGate: boolean
   hasAccess: boolean
   hasPermission: (permission: Permission) => boolean
   view: AppView
@@ -93,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStaffRows(rows)
 
         const canDashboard = staffHasPermission(rows, PERMISSIONS.DASHBOARD_READ)
-        const canScanner = staffHasPermission(rows, PERMISSIONS.SCANNER)
+        const canScanner = staffHasAnyScanner(rows)
 
         if (canDashboard) setView('admin')
         else if (canScanner) setView('reception')
@@ -180,7 +183,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       !staffHasPermission(staffRows, PERMISSIONS.DASHBOARD_WRITE))
   const canWrite = staffHasPermission(staffRows, PERMISSIONS.DASHBOARD_WRITE)
   const hasDashboard = staffHasPermission(staffRows, PERMISSIONS.DASHBOARD_READ)
-  const hasReception = staffHasPermission(staffRows, PERMISSIONS.SCANNER)
+  const hasScannerReception = staffHasPermission(staffRows, PERMISSIONS.SCANNER_RECEPTION)
+  const hasScannerGate = staffHasPermission(staffRows, PERMISSIONS.SCANNER_GATE)
+  const hasReception = staffHasAnyScanner(staffRows)
   const hasAccess = isSuperAdmin || staffRows.length > 0
   const resortId = staffRows[0]?.resort_id ?? null
   const isLoading = loading || rolesLoading
@@ -198,6 +203,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       canWrite,
       hasDashboard,
       hasReception,
+      hasScannerReception,
+      hasScannerGate,
       hasAccess,
       hasPermission,
       view,
@@ -218,6 +225,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       canWrite,
       hasDashboard,
       hasReception,
+      hasScannerReception,
+      hasScannerGate,
       hasAccess,
       hasPermission,
       view,
