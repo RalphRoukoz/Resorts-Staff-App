@@ -26,6 +26,7 @@ interface AuthContextValue {
   session: Session | null
   isSuperAdmin: boolean
   staffRows: StaffWithRole[]
+  staffUsername: string | null
   resort: Resort | null
   resortId: string | null
   loading: boolean
@@ -188,6 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasReception = staffHasAnyScanner(staffRows)
   const hasAccess = isSuperAdmin || staffRows.length > 0
   const resortId = staffRows[0]?.resort_id ?? null
+  const staffUsername = staffRows[0]?.username?.trim() || null
   const isLoading = loading || rolesLoading
 
   const value = useMemo<AuthContextValue>(
@@ -195,6 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       isSuperAdmin,
       staffRows,
+      staffUsername,
       resort,
       resortId,
       loading: isLoading,
@@ -217,6 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       isSuperAdmin,
       staffRows,
+      staffUsername,
       resort,
       resortId,
       isLoading,

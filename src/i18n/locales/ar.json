@@ -3,6 +3,7 @@
     "name": "Resortly Admin",
     "staffDashboard": "لوحة الموظفين",
     "viewOnlyDashboard": "لوحة للقراءة فقط",
+    "signedInAs": "مسجّل الدخول: {{username}}",
     "superAdmin": "المشرف العام",
     "platformConsole": "وحدة التحكم"
   },
@@ -88,6 +89,7 @@
     "allowMultipleLoginsHint": "عند الإيقاف (الافتراضي)، يمكن لجهاز واحد فقط البقاء مسجّلاً برقم المالك. تسجيل دخول جديد يُخرج الجهاز السابق.",
     "noOwnerName": "—",
     "addInvites": "إضافة دعوات",
+    "removeInvites": "إزالة دعوات",
     "allowanceUnavailable": "—",
     "noData": "لا توجد بيانات حصة",
     "unlimited": "غير محدود",
@@ -162,7 +164,7 @@
   "permissions": {
     "dashboard.read": "عرض اللوحة",
     "dashboard.write": "كتابة كاملة للوحة",
-    "invitations.bonus": "منح دعوات إضافية",
+    "invitations.bonus": "منح أو إزالة دعوات إضافية",
     "announcements.write": "إدارة الإعلانات",
     "listings.write": "إدارة قوائم البيع والإيجار",
     "staff.manage": "إدارة حسابات الموظفين",

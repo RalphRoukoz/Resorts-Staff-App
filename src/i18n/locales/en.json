@@ -3,6 +3,7 @@
     "name": "Resortly Admin",
     "staffDashboard": "Staff dashboard",
     "viewOnlyDashboard": "View-only dashboard",
+    "signedInAs": "Signed in as {{username}}",
     "superAdmin": "Super Admin",
     "platformConsole": "Platform Console"
   },
@@ -88,6 +89,7 @@
     "allowMultipleLoginsHint": "When off (default), only one device can stay signed in with an owner phone for this unit. A new login signs out the previous device.",
     "noOwnerName": "—",
     "addInvites": "Add invites",
+    "removeInvites": "Remove invites",
     "allowanceUnavailable": "—",
     "noData": "No allowance data",
     "unlimited": "Unlimited",
@@ -195,7 +197,7 @@
   "permissions": {
     "dashboard.read": "View dashboard",
     "dashboard.write": "Full dashboard write access",
-    "invitations.bonus": "Grant bonus invitations",
+    "invitations.bonus": "Grant or remove bonus invitations",
     "announcements.write": "Manage announcements",
     "listings.write": "Manage marketplace listings",
     "staff.manage": "Manage staff accounts",

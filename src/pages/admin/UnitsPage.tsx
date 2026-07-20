@@ -115,6 +115,7 @@ export function UnitsPage() {
   const [saving, setSaving] = useState(false)
 
   const [bonusUnit, setBonusUnit] = useState<Asset | null>(null)
+  const [bonusMode, setBonusMode] = useState<'add' | 'remove'>('add')
   const [weekdayAdd, setWeekdayAdd] = useState('1')
   const [weekendAdd, setWeekendAdd] = useState('0')
   const [bonusError, setBonusError] = useState<string | null>(null)
@@ -250,9 +251,10 @@ export function UnitsPage() {
     setModalOpen(true)
   }
 
-  function openBonus(unit: Asset) {
+  function openBonus(unit: Asset, mode: 'add' | 'remove' = 'add') {
     setBonusUnit(unit)
-    setWeekdayAdd('1')
+    setBonusMode(mode)
+    setWeekdayAdd(mode === 'add' ? '1' : '0')
     setWeekendAdd('0')
     setBonusError(null)
   }
@@ -320,21 +322,32 @@ export function UnitsPage() {
 
   async function handleGrantBonus() {
     if (!bonusUnit) return
-    const wd = Number(weekdayAdd) || 0
-    const we = Number(weekendAdd) || 0
-    if (wd < 0 || we < 0 || (wd === 0 && we === 0)) {
-      setBonusError('Enter at least one positive bonus amount')
+    const wd = Math.max(0, Math.floor(Number(weekdayAdd) || 0))
+    const we = Math.max(0, Math.floor(Number(weekendAdd) || 0))
+    if (wd === 0 && we === 0) {
+      setBonusError(
+        bonusMode === 'remove'
+          ? 'Enter at least one amount to remove'
+          : 'Enter at least one positive bonus amount',
+      )
       return
     }
 
     setBonusSaving(true)
     setBonusError(null)
 
-    const { error: rpcError } = await supabase.rpc('grant_asset_invite_bonus', {
-      p_asset: bonusUnit.id,
-      p_weekday_add: wd,
-      p_weekend_add: we,
-    })
+    const { error: rpcError } =
+      bonusMode === 'remove'
+        ? await supabase.rpc('remove_asset_invite_bonus', {
+            p_asset: bonusUnit.id,
+            p_weekday_remove: wd,
+            p_weekend_remove: we,
+          })
+        : await supabase.rpc('grant_asset_invite_bonus', {
+            p_asset: bonusUnit.id,
+            p_weekday_add: wd,
+            p_weekend_add: we,
+          })
 
     if (rpcError) {
       setBonusError(rpcError.message)
@@ -472,9 +485,14 @@ export function UnitsPage() {
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-2">
                             {canGrantBonus && unitSupportsBonusInvites(unit, resort) ? (
-                              <Button variant="secondary" onClick={() => openBonus(unit)}>
-                                {t('units.addInvites')}
-                              </Button>
+                              <>
+                                <Button variant="secondary" onClick={() => openBonus(unit, 'add')}>
+                                  {t('units.addInvites')}
+                                </Button>
+                                <Button variant="secondary" onClick={() => openBonus(unit, 'remove')}>
+                                  {t('units.removeInvites')}
+                                </Button>
+                              </>
                             ) : null}
                             {canManageUnits ? (
                               <>
@@ -601,7 +619,7 @@ export function UnitsPage() {
 
       {bonusUnit && canGrantBonus ? (
         <Modal
-          title={`Add bonus invites — ${bonusUnit.label}`}
+          title={`${bonusMode === 'remove' ? 'Remove bonus invites' : 'Add bonus invites'} — ${bonusUnit.label}`}
           onClose={() => setBonusUnit(null)}
           footer={
             <>
@@ -609,29 +627,42 @@ export function UnitsPage() {
                 Cancel
               </Button>
               <Button onClick={() => void handleGrantBonus()} disabled={bonusSaving}>
-                {bonusSaving ? 'Adding…' : 'Add to this month'}
+                {bonusSaving
+                  ? bonusMode === 'remove'
+                    ? 'Removing…'
+                    : 'Adding…'
+                  : bonusMode === 'remove'
+                    ? 'Remove from this month'
+                    : 'Add to this month'}
               </Button>
             </>
           }
         >
           <div className="space-y-4">
             <p className="text-sm text-gray-500">
-              Bonuses stack for the current calendar month and reset automatically next month. Base allowance
-              stays the resort default.
+              {bonusMode === 'remove'
+                ? 'Removes bonus invitations for the current calendar month only. Amounts cannot go below zero.'
+                : 'Bonuses stack for the current calendar month and reset automatically next month. Base allowance stays the resort default.'}
             </p>
+            {bonusMode === 'remove' && allowances[bonusUnit.id] ? (
+              <p className="text-xs text-gray-500">
+                Current bonus: {allowances[bonusUnit.id].weekday.bonus ?? 0} weekday ·{' '}
+                {allowances[bonusUnit.id].weekend.bonus ?? 0} weekend
+              </p>
+            ) : null}
             <Input
-              label="Extra weekday invitations"
+              label={bonusMode === 'remove' ? 'Weekday invitations to remove' : 'Extra weekday invitations'}
               type="number"
               min={0}
               value={weekdayAdd}
-              onChange={(e) => setWeekdayAdd(e.target.value)}
+              onChange={(e) => setWeekdayAdd(e.target.value.replace(/[^\d]/g, ''))}
             />
             <Input
-              label="Extra weekend invitations"
+              label={bonusMode === 'remove' ? 'Weekend invitations to remove' : 'Extra weekend invitations'}
               type="number"
               min={0}
               value={weekendAdd}
-              onChange={(e) => setWeekendAdd(e.target.value)}
+              onChange={(e) => setWeekendAdd(e.target.value.replace(/[^\d]/g, ''))}
             />
             {bonusError ? <p className="text-sm text-red-600">{bonusError}</p> : null}
           </div>

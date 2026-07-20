@@ -4,6 +4,7 @@ import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
+import { PERMISSIONS } from '../../lib/permissions'
 import {
   EXPIRY_PRESET_LABELS,
   computeAnnouncementExpiresAt,
@@ -23,7 +24,8 @@ const audienceLabels: Record<Audience, string> = {
 }
 
 export function AnnouncementsPage() {
-  const { resortId, canWrite } = useAuth()
+  const { resortId, hasPermission } = useAuth()
+  const canWrite = hasPermission(PERMISSIONS.ANNOUNCEMENTS_WRITE)
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

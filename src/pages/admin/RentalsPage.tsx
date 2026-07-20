@@ -5,6 +5,7 @@ import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
+import { PERMISSIONS } from '../../lib/permissions'
 import { formatDate, todayISO } from '../../lib/dates'
 import { formatPersonName } from '../../lib/names'
 import { displayPhone, PHONE_ERROR, isValidPhone, normalizePhone } from '../../lib/phone'
@@ -30,7 +31,8 @@ const emptyForm: RentalForm = {
 }
 
 export function RentalsPage() {
-  const { resortId, canWrite } = useAuth()
+  const { resortId, hasPermission } = useAuth()
+  const canWrite = hasPermission(PERMISSIONS.RENTALS_WRITE)
   const [rentals, setRentals] = useState<TenancyWithAsset[]>([])
   const [selectedAssetLabel, setSelectedAssetLabel] = useState('')
   const [loading, setLoading] = useState(true)

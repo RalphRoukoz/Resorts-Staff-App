@@ -26,7 +26,7 @@ const writeNavItems = [
 
 export function AdminLayout() {
   const { t } = useTranslation()
-  const { resort, canWrite, hasPermission, signOut } = useAuth()
+  const { resort, canWrite, hasPermission, staffUsername, signOut } = useAuth()
 
   const marketplaceEnabled = resort?.marketplace_listings_enabled !== false
   const filteredWriteNav = writeNavItems.filter((item) => hasPermission(item.permission))
@@ -89,6 +89,11 @@ export function AdminLayout() {
         </nav>
 
         <div className="border-t border-[#ECECEC] p-3">
+          {staffUsername ? (
+            <p className="mb-2 truncate px-1 text-xs text-gray-500" title={staffUsername}>
+              {t('app.signedInAs', { username: staffUsername })}
+            </p>
+          ) : null}
           <Button variant="ghost" fullWidth onClick={() => void signOut()}>
             {t('common.signOut')}
           </Button>
@@ -99,6 +104,11 @@ export function AdminLayout() {
         <header className="flex items-center justify-between border-b border-[#ECECEC] bg-white px-4 py-3 lg:hidden">
           <BrandMark compact />
           <div className="flex items-center gap-2">
+            {staffUsername ? (
+              <span className="max-w-[100px] truncate text-xs text-gray-500" title={staffUsername}>
+                {staffUsername}
+              </span>
+            ) : null}
             <LanguageSwitcher />
             <Button variant="ghost" onClick={() => void signOut()}>
               {t('common.out')}

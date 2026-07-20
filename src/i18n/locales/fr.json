@@ -3,6 +3,7 @@
     "name": "Resortly Admin",
     "staffDashboard": "Tableau staff",
     "viewOnlyDashboard": "Tableau lecture seule",
+    "signedInAs": "Connecté en tant que {{username}}",
     "superAdmin": "Super Admin",
     "platformConsole": "Console plateforme"
   },
@@ -88,6 +89,7 @@
     "allowMultipleLoginsHint": "Désactivé par défaut : un seul appareil peut rester connecté avec un numéro propriétaire. Une nouvelle connexion déconnecte l'appareil précédent.",
     "noOwnerName": "—",
     "addInvites": "Ajouter des invitations",
+    "removeInvites": "Retirer des invitations",
     "allowanceUnavailable": "—",
     "noData": "Pas de données quota",
     "unlimited": "Illimité",
@@ -163,7 +165,7 @@
   "permissions": {
     "dashboard.read": "Voir le tableau de bord",
     "dashboard.write": "Écriture complète tableau de bord",
-    "invitations.bonus": "Accorder des invitations bonus",
+    "invitations.bonus": "Accorder ou retirer des invitations bonus",
     "announcements.write": "Gérer les annonces",
     "listings.write": "Gérer les annonces immobilières",
     "staff.manage": "Gérer les comptes staff",

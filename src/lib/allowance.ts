@@ -31,7 +31,7 @@ export function parseAllowanceBucket(raw: unknown): InviteAllowanceBucket | null
   const remainingRaw = o.remaining
   const remaining = remainingRaw == null || Number.isNaN(Number(remainingRaw))
     ? Math.max(total - used, 0)
-    : Number(remainingRaw)
+    : Math.max(Number(remainingRaw), 0)
 
   const totalVal = o.total
   if (totalVal === null || totalVal === undefined || String(totalVal) === 'null') {

@@ -103,6 +103,7 @@ export function ListingsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<MarketplaceListing | null>(null)
   const [form, setForm] = useState<ListingForm>(emptyForm)
+  const [managedImages, setManagedImages] = useState<string[]>([])
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -144,6 +145,7 @@ export function ListingsPage() {
   function openCreate() {
     setEditing(null)
     setForm(emptyForm())
+    setManagedImages([])
     setPendingFiles([])
     setFormError(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -153,10 +155,27 @@ export function ListingsPage() {
   function openEdit(item: MarketplaceListing) {
     setEditing(item)
     setForm(formFromListing(item))
+    setManagedImages([...(item.images ?? [])])
     setPendingFiles([])
     setFormError(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
     setModalOpen(true)
+  }
+
+  function moveImage(index: number, direction: -1 | 1) {
+    setManagedImages((prev) => {
+      const next = [...prev]
+      const target = index + direction
+      if (target < 0 || target >= next.length) return prev
+      const tmp = next[index]
+      next[index] = next[target]
+      next[target] = tmp
+      return next
+    })
+  }
+
+  function removeManagedImage(index: number) {
+    setManagedImages((prev) => prev.filter((_, i) => i !== index))
   }
 
   async function uploadFiles(listingId: string, files: File[]): Promise<string[]> {
@@ -209,7 +228,7 @@ export function ListingsPage() {
       return
     }
 
-    const existingCount = editing?.images?.length ?? 0
+    const existingCount = managedImages.length
     if (existingCount + pendingFiles.length > MAX_IMAGES) {
       setFormError(`Maximum ${MAX_IMAGES} images per listing`)
       return
@@ -240,7 +259,8 @@ export function ListingsPage() {
 
     try {
       let listingId = editing?.id
-      let images = [...(editing?.images ?? [])]
+      let images = [...managedImages]
+      const previousImages = editing?.images ?? []
 
       if (editing) {
         const { error: updateError } = await supabase
@@ -267,19 +287,32 @@ export function ListingsPage() {
       if (pendingFiles.length > 0) {
         const uploaded = await uploadFiles(listingId, pendingFiles)
         images = [...images, ...uploaded]
-        const cover = images[0] ?? null
+      }
+
+      const cover = images[0] ?? null
+      const imagesChanged =
+        !editing ||
+        pendingFiles.length > 0 ||
+        previousImages.length !== images.length ||
+        previousImages.some((url, i) => url !== images[i]) ||
+        (editing.cover_url ?? null) !== cover
+
+      if (imagesChanged) {
         const { error: imgError } = await supabase
           .from('marketplace_listings')
           .update({ images, cover_url: cover })
           .eq('id', listingId)
           .eq('resort_id', resortId)
         if (imgError) throw new Error(imgError.message)
-      } else if (editing && !editing.cover_url && images[0]) {
-        await supabase
-          .from('marketplace_listings')
-          .update({ cover_url: images[0] })
-          .eq('id', listingId)
-          .eq('resort_id', resortId)
+      }
+
+      const kept = new Set(images)
+      const removedPaths = previousImages
+        .filter((url) => !kept.has(url))
+        .map((url) => storagePathFromPublicUrl(url))
+        .filter((p): p is string => Boolean(p))
+      if (removedPaths.length > 0) {
+        await supabase.storage.from(FILES_BUCKET).remove(removedPaths)
       }
 
       setModalOpen(false)
@@ -570,17 +603,72 @@ export function ListingsPage() {
               <span className="mb-1.5 block text-sm font-medium text-gray-700">
                 Images (max {MAX_IMAGES}, jpeg/png/webp)
               </span>
-              {editing?.images?.length ? (
-                <p className="mb-2 text-xs text-gray-500">{editing.images.length} image(s) already attached</p>
-              ) : null}
+              {managedImages.length > 0 ? (
+                <ul className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {managedImages.map((url, index) => (
+                    <li
+                      key={`${url}-${index}`}
+                      className="overflow-hidden rounded-xl border border-[#ECECEC] bg-[#FAFAFA]"
+                    >
+                      <div className="relative aspect-[4/3] bg-gray-100">
+                        <img src={url} alt="" className="h-full w-full object-cover" />
+                        {index === 0 ? (
+                          <span className="absolute start-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                            Cover
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center justify-between gap-1 p-2">
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            className="rounded-lg border border-[#ECECEC] bg-white px-2 py-1 text-xs text-gray-600 disabled:opacity-40"
+                            disabled={index === 0}
+                            onClick={() => moveImage(index, -1)}
+                            aria-label="Move earlier"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-lg border border-[#ECECEC] bg-white px-2 py-1 text-xs text-gray-600 disabled:opacity-40"
+                            disabled={index === managedImages.length - 1}
+                            onClick={() => moveImage(index, 1)}
+                            aria-label="Move later"
+                          >
+                            ↓
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          className="rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                          onClick={() => removeManagedImage(index)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mb-2 text-xs text-gray-500">No images yet. First image becomes the cover.</p>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/gif"
                 multiple
-                onChange={(e) => setPendingFiles(Array.from(e.target.files ?? []).slice(0, MAX_IMAGES))}
+                onChange={(e) => {
+                  const remaining = Math.max(0, MAX_IMAGES - managedImages.length)
+                  setPendingFiles(Array.from(e.target.files ?? []).slice(0, remaining))
+                }}
                 className="block text-sm text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium"
               />
+              {pendingFiles.length > 0 ? (
+                <p className="mt-1 text-xs text-gray-500">
+                  {pendingFiles.length} new file{pendingFiles.length === 1 ? '' : 's'} will upload on save
+                </p>
+              ) : null}
             </div>
           </div>
         </Modal>
