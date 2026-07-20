@@ -43,6 +43,8 @@ export interface Resort {
   period_allowance_mode: PeriodAllowanceMode
   logo_url: string | null
   primary_color: string | null
+  /** When false, marketplace listings tab/nav is hidden in owner app and staff dashboard. */
+  marketplace_listings_enabled?: boolean
   created_at: string
 }
 
@@ -147,6 +149,33 @@ export interface Announcement {
   audience: Audience
   expires_at: string | null
   created_at: string
+}
+
+export type ListingType = 'sale' | 'rental'
+
+export interface MarketplaceListing {
+  id: string
+  resort_id: string
+  listing_type: ListingType
+  title: string
+  description: string | null
+  price_usd: number
+  size_sqm: number | null
+  beds: number | null
+  baths: number | null
+  block: string | null
+  floor_number: string | null
+  chalet_number: string | null
+  images: string[]
+  cover_url: string | null
+  call_phone: string | null
+  whatsapp_phone: string | null
+  is_featured: boolean
+  is_published: boolean
+  sort_order: number
+  created_by: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface ValidateSuccess {

@@ -6,6 +6,7 @@ import { PERMISSIONS, type Permission } from './lib/permissions'
 import { AdminLayout } from './pages/admin/AdminLayout'
 import { AnalyticsPage } from './pages/admin/AnalyticsPage'
 import { AnnouncementsPage } from './pages/admin/AnnouncementsPage'
+import { ListingsPage } from './pages/admin/ListingsPage'
 import { StaffPage } from './pages/admin/StaffPage'
 import { RentalsPage } from './pages/admin/RentalsPage'
 import { ResortConfigPage } from './pages/admin/ResortConfigPage'
@@ -89,6 +90,14 @@ function RequireScannerCheckpoint({
   return <Outlet />
 }
 
+function RequireMarketplace() {
+  const { resort } = useAuth()
+  if (resort?.marketplace_listings_enabled === false) {
+    return <Navigate to="/admin/units" replace />
+  }
+  return <Outlet />
+}
+
 export default function App() {
   const { loading } = useAuth()
 
@@ -136,6 +145,9 @@ export default function App() {
           <Route path="today" element={<TodayPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
+          <Route element={<RequireMarketplace />}>
+            <Route path="listings" element={<ListingsPage />} />
+          </Route>
           <Route element={<RequirePermission permission={PERMISSIONS.CONFIG_WRITE} />}>
             <Route path="configuration" element={<ResortConfigPage />} />
           </Route>

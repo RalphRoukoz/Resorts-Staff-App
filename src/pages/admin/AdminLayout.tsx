@@ -17,6 +17,8 @@ const readNavItems = [
   { to: '/admin/announcements', labelKey: 'nav.announcements' },
 ] as const
 
+const marketplaceNavItem = { to: '/admin/listings', labelKey: 'nav.listings' } as const
+
 const writeNavItems = [
   { to: '/admin/staff', labelKey: 'nav.staff', permission: PERMISSIONS.STAFF_MANAGE },
   { to: '/admin/configuration', labelKey: 'nav.configuration', permission: PERMISSIONS.CONFIG_WRITE },
@@ -26,8 +28,13 @@ export function AdminLayout() {
   const { t } = useTranslation()
   const { resort, canWrite, hasPermission, signOut } = useAuth()
 
+  const marketplaceEnabled = resort?.marketplace_listings_enabled !== false
   const filteredWriteNav = writeNavItems.filter((item) => hasPermission(item.permission))
-  const navItems = [...readNavItems, ...filteredWriteNav]
+  const navItems = [
+    ...readNavItems,
+    ...(marketplaceEnabled ? [marketplaceNavItem] : []),
+    ...filteredWriteNav,
+  ]
 
   const accent = resort?.primary_color || DEFAULT_ACCENT
   const rootStyle = { '--accent': accent } as CSSProperties
