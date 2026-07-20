@@ -45,6 +45,15 @@ export interface Resort {
   primary_color: string | null
   /** When false, marketplace listings tab/nav is hidden in owner app and staff dashboard. */
   marketplace_listings_enabled?: boolean
+  map_enabled?: boolean
+  map_image_url?: string | null
+  events_enabled?: boolean
+  gallery_enabled?: boolean
+  info_enabled?: boolean
+  public_phone?: string | null
+  public_whatsapp?: string | null
+  arrival_notes?: string | null
+  gate_notes?: string | null
   created_at: string
 }
 
@@ -148,6 +157,68 @@ export interface Announcement {
   pdf_url: string | null
   audience: Audience
   expires_at: string | null
+  is_public?: boolean
+  created_at: string
+}
+
+export type PoiType =
+  | 'restaurant'
+  | 'sports'
+  | 'playground'
+  | 'pool'
+  | 'beach'
+  | 'other'
+
+export interface ResortMapPoi {
+  id: string
+  resort_id: string
+  poi_type: PoiType
+  title: string
+  description: string | null
+  image_url: string | null
+  x_pct: number
+  y_pct: number
+  hours_json: Record<string, unknown> | null
+  hours_note: string | null
+  menu_urls: string[]
+  sort_order: number
+  is_published: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ResortEvent {
+  id: string
+  resort_id: string
+  title: string
+  description: string | null
+  cover_url: string | null
+  starts_at: string
+  ends_at: string | null
+  location_label: string | null
+  poi_id: string | null
+  is_published: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ResortGalleryImage {
+  id: string
+  resort_id: string
+  image_url: string
+  caption: string | null
+  sort_order: number
+  is_published: boolean
+  created_at: string
+}
+
+export interface ResortFaq {
+  id: string
+  resort_id: string
+  question: string
+  answer: string
+  sort_order: number
+  is_published: boolean
   created_at: string
 }
 

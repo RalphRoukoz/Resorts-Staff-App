@@ -36,6 +36,7 @@ export function AnnouncementsPage() {
   const [audience, setAudience] = useState<Audience>('both')
   const [expiryPreset, setExpiryPreset] = useState<AnnouncementExpiryPreset>('never')
   const [customExpiresAt, setCustomExpiresAt] = useState('')
+  const [isPublic, setIsPublic] = useState(false)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -67,6 +68,7 @@ export function AnnouncementsPage() {
     setAudience('both')
     setExpiryPreset('never')
     setCustomExpiresAt('')
+    setIsPublic(false)
     setPdfFile(null)
     setFormError(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -119,6 +121,7 @@ export function AnnouncementsPage() {
       audience,
       pdf_url: pdfUrl,
       expires_at: expiresAt,
+      is_public: isPublic,
     })
 
     if (insertError) {
@@ -177,6 +180,11 @@ export function AnnouncementsPage() {
                     <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
                       {audienceLabels[item.audience]}
                     </span>
+                    {item.is_public ? (
+                      <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-700">
+                        Public (guest app)
+                      </span>
+                    ) : null}
                     {item.expires_at ? (
                       <span
                         className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -261,6 +269,20 @@ export function AnnouncementsPage() {
                 <option value="chalet">Chalets only</option>
                 <option value="cabine">Cabines only</option>
               </select>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-4 py-3">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-gray-300"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+              />
+              <span>
+                <span className="block text-sm font-medium text-[#1A1A1A]">Show on guest Explore home</span>
+                <span className="mt-0.5 block text-sm text-gray-500">
+                  Visible to unsigned guests in the owner app Explore tab.
+                </span>
+              </span>
             </label>
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium text-gray-700">Auto-remove after</span>

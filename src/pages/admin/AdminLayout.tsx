@@ -19,6 +19,8 @@ const readNavItems = [
 
 const marketplaceNavItem = { to: '/admin/listings', labelKey: 'nav.listings' } as const
 
+const eventsNavItem = { to: '/admin/events', labelKey: 'nav.events' } as const
+
 const writeNavItems = [
   { to: '/admin/staff', labelKey: 'nav.staff', permission: PERMISSIONS.STAFF_MANAGE },
   { to: '/admin/configuration', labelKey: 'nav.configuration', permission: PERMISSIONS.CONFIG_WRITE },
@@ -29,10 +31,15 @@ export function AdminLayout() {
   const { resort, canWrite, hasPermission, staffUsername, signOut } = useAuth()
 
   const marketplaceEnabled = resort?.marketplace_listings_enabled !== false
+  const eventsEnabled = resort?.events_enabled === true
+  const canManageEvents =
+    eventsEnabled &&
+    (hasPermission(PERMISSIONS.EVENTS_WRITE) || hasPermission(PERMISSIONS.ANNOUNCEMENTS_WRITE))
   const filteredWriteNav = writeNavItems.filter((item) => hasPermission(item.permission))
   const navItems = [
     ...readNavItems,
     ...(marketplaceEnabled ? [marketplaceNavItem] : []),
+    ...(canManageEvents ? [eventsNavItem] : []),
     ...filteredWriteNav,
   ]
 

@@ -29,6 +29,7 @@
     "analytics": "Analytique",
     "announcements": "Annonces",
     "listings": "Marketplace",
+    "events": "Événements",
     "receptionStaff": "Personnel réception",
     "viewers": "Lecteurs tableau de bord",
     "roles": "Rôles et permissions",
@@ -167,6 +168,7 @@
     "dashboard.write": "Écriture complète tableau de bord",
     "invitations.bonus": "Accorder ou retirer des invitations bonus",
     "announcements.write": "Gérer les annonces",
+    "events.write": "Gérer les événements",
     "listings.write": "Gérer les annonces immobilières",
     "staff.manage": "Gérer les comptes staff",
     "config.write": "Modifier la configuration",
@@ -204,5 +206,23 @@
     "ends": "Fin",
     "unit": "Unité",
     "noRentals": "Aucune location active."
+  },
+  "events": {
+    "title": "Événements",
+    "subtitle": "Planifier et publier des événements pour l'app invités.",
+    "loading": "Chargement des événements…",
+    "add": "Nouvel événement",
+    "edit": "Modifier",
+    "empty": "Aucun événement.",
+    "published": "Publié",
+    "draft": "Brouillon",
+    "disabledHint": "Les événements sont désactivés pour ce resort.",
+    "fieldTitle": "Titre",
+    "fieldDescription": "Description",
+    "fieldStarts": "Début",
+    "fieldEnds": "Fin (optionnel)",
+    "fieldLocation": "Lieu",
+    "fieldPoi": "Lieu sur la carte",
+    "fieldCover": "Image de couverture"
   }
 }

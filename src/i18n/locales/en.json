@@ -29,6 +29,7 @@
     "analytics": "Analytics",
     "announcements": "Announcements",
     "listings": "Marketplace",
+    "events": "Events",
     "receptionStaff": "Reception staff",
     "viewers": "Dashboard viewers",
     "roles": "Roles & permissions",
@@ -199,6 +200,7 @@
     "dashboard.write": "Full dashboard write access",
     "invitations.bonus": "Grant or remove bonus invitations",
     "announcements.write": "Manage announcements",
+    "events.write": "Manage events",
     "listings.write": "Manage marketplace listings",
     "staff.manage": "Manage staff accounts",
     "config.write": "Edit resort configuration",
@@ -239,5 +241,23 @@
     "ends": "Ends",
     "unit": "Unit",
     "noRentals": "No active rentals."
+  },
+  "events": {
+    "title": "Events",
+    "subtitle": "Schedule and publish events for the guest Explore app.",
+    "loading": "Loading events…",
+    "add": "New event",
+    "edit": "Edit event",
+    "empty": "No events yet.",
+    "published": "Published",
+    "draft": "Draft",
+    "disabledHint": "Events are disabled for this resort. Ask a platform admin to enable Events in Super Admin → Resorts.",
+    "fieldTitle": "Title",
+    "fieldDescription": "Description",
+    "fieldStarts": "Starts",
+    "fieldEnds": "Ends (optional)",
+    "fieldLocation": "Location label",
+    "fieldPoi": "Linked map place",
+    "fieldCover": "Cover image"
   }
 }

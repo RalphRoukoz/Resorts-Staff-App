@@ -20,6 +20,10 @@ import { SuperAdminLayout } from './pages/superadmin/SuperAdminLayout'
 import { SuperOverviewPage } from './pages/superadmin/SuperOverviewPage'
 import { SuperResortAdminsPage } from './pages/superadmin/SuperResortAdminsPage'
 import { SuperResortsPage } from './pages/superadmin/SuperResortsPage'
+import { EventsPage } from './pages/admin/EventsPage'
+import { SuperMapEditorPage } from './pages/superadmin/SuperMapEditorPage'
+import { SuperGalleryPage } from './pages/superadmin/SuperGalleryPage'
+import { SuperInfoPage } from './pages/superadmin/SuperInfoPage'
 
 function RootRedirect() {
   const { isSuperAdmin, hasDashboard, hasReception, hasScannerReception, hasScannerGate, view } =
@@ -98,6 +102,25 @@ function RequireMarketplace() {
   return <Outlet />
 }
 
+function RequireEventsEnabled() {
+  const { resort } = useAuth()
+  if (resort?.events_enabled !== true) {
+    return <Navigate to="/admin/units" replace />
+  }
+  return <Outlet />
+}
+
+function RequireEventsWrite() {
+  const { hasPermission } = useAuth()
+  if (
+    !hasPermission(PERMISSIONS.EVENTS_WRITE) &&
+    !hasPermission(PERMISSIONS.ANNOUNCEMENTS_WRITE)
+  ) {
+    return <Navigate to="/admin/units" replace />
+  }
+  return <Outlet />
+}
+
 export default function App() {
   const { loading } = useAuth()
 
@@ -126,6 +149,9 @@ export default function App() {
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<SuperOverviewPage />} />
           <Route path="resorts" element={<SuperResortsPage />} />
+          <Route path="resorts/:resortId/map" element={<SuperMapEditorPage />} />
+          <Route path="resorts/:resortId/gallery" element={<SuperGalleryPage />} />
+          <Route path="resorts/:resortId/info" element={<SuperInfoPage />} />
           <Route path="admins" element={<SuperResortAdminsPage />} />
         </Route>
       </Route>
@@ -145,6 +171,11 @@ export default function App() {
           <Route path="today" element={<TodayPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
+          <Route element={<RequireEventsEnabled />}>
+            <Route element={<RequireEventsWrite />}>
+              <Route path="events" element={<EventsPage />} />
+            </Route>
+          </Route>
           <Route element={<RequireMarketplace />}>
             <Route path="listings" element={<ListingsPage />} />
           </Route>

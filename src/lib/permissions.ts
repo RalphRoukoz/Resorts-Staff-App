@@ -15,6 +15,7 @@ export const PERMISSIONS = {
   RENTALS_WRITE: 'rentals.write',
   ANALYTICS_READ: 'analytics.read',
   LISTINGS_WRITE: 'listings.write',
+  EVENTS_WRITE: 'events.write',
 } as const
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
@@ -33,6 +34,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   PERMISSIONS.RENTALS_WRITE,
   PERMISSIONS.ANALYTICS_READ,
   PERMISSIONS.LISTINGS_WRITE,
+  PERMISSIONS.EVENTS_WRITE,
 ]
 
 export const PERMISSION_LABELS: Record<Permission, string> = {
@@ -49,6 +51,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'rentals.write': 'Manage rentals',
   'analytics.read': 'View analytics',
   'listings.write': 'Manage marketplace listings',
+  'events.write': 'Manage resort events',
 }
 
 export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
@@ -65,6 +68,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'rentals.write': 'Create and remove tenant rentals.',
   'analytics.read': 'View validated visit analytics and guest reports.',
   'listings.write': 'Create, edit, and permanently delete sale/rental marketplace listings.',
+  'events.write': 'Create, edit, and publish resort events for the guest app.',
 }
 
 export type StaffWithRole = ResortStaff & { resort_roles?: ResortRole | null }

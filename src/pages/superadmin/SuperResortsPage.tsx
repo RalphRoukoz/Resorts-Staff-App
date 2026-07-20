@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
@@ -23,6 +24,11 @@ interface ResortForm {
   weekend_days: number[]
   primary_color: string
   logo_url: string | null
+  marketplace_listings_enabled: boolean
+  map_enabled: boolean
+  events_enabled: boolean
+  gallery_enabled: boolean
+  info_enabled: boolean
 }
 
 const emptyForm: ResortForm = {
@@ -38,6 +44,11 @@ const emptyForm: ResortForm = {
   weekend_days: [5, 6],
   primary_color: DEFAULT_ACCENT,
   logo_url: null,
+  marketplace_listings_enabled: true,
+  map_enabled: false,
+  events_enabled: false,
+  gallery_enabled: false,
+  info_enabled: false,
 }
 
 function toggleDay(days: number[], day: number): number[] {
@@ -126,6 +137,11 @@ export function SuperResortsPage() {
       weekend_days: [...resort.weekend_days],
       primary_color: resort.primary_color || DEFAULT_ACCENT,
       logo_url: resort.logo_url,
+      marketplace_listings_enabled: resort.marketplace_listings_enabled ?? true,
+      map_enabled: resort.map_enabled ?? false,
+      events_enabled: resort.events_enabled ?? false,
+      gallery_enabled: resort.gallery_enabled ?? false,
+      info_enabled: resort.info_enabled ?? false,
     })
     setLogoFile(null)
     setFormError(null)
@@ -175,6 +191,11 @@ export function SuperResortsPage() {
       weekend_days: form.weekend_days,
       primary_color: form.primary_color,
       logo_url: nextLogoUrl,
+      marketplace_listings_enabled: form.marketplace_listings_enabled,
+      map_enabled: form.map_enabled,
+      events_enabled: form.events_enabled,
+      gallery_enabled: form.gallery_enabled,
+      info_enabled: form.info_enabled,
     }
 
     if (editingId) {
@@ -241,6 +262,7 @@ export function SuperResortsPage() {
               <th className="px-4 py-3 font-medium">Resort</th>
               <th className="px-4 py-3 font-medium">Units</th>
               <th className="px-4 py-3 font-medium">Invitations</th>
+              <th className="px-4 py-3 font-medium">Guest features</th>
               <th className="px-4 py-3 font-medium">Chalet (wd/we)</th>
               <th className="px-4 py-3 font-medium">Cabine (wd/we)</th>
               <th className="px-4 py-3 font-medium">Actions</th>
@@ -268,6 +290,68 @@ export function SuperResortsPage() {
                 </td>
                 <td className="px-4 py-3 text-gray-600">{resort.chalet_count}</td>
                 <td className="px-4 py-3 text-gray-600">{resort.invitation_count}</td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {resort.marketplace_listings_enabled !== false ? (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                        Marketplace
+                      </span>
+                    ) : null}
+                    {resort.map_enabled ? (
+                      <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                        Map
+                      </span>
+                    ) : null}
+                    {resort.events_enabled ? (
+                      <span className="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
+                        Events
+                      </span>
+                    ) : null}
+                    {resort.gallery_enabled ? (
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
+                        Gallery
+                      </span>
+                    ) : null}
+                    {resort.info_enabled ? (
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                        Info
+                      </span>
+                    ) : null}
+                    {!resort.map_enabled &&
+                    !resort.events_enabled &&
+                    !resort.gallery_enabled &&
+                    !resort.info_enabled &&
+                    resort.marketplace_listings_enabled === false ? (
+                      <span className="text-xs text-gray-400">—</span>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {resort.map_enabled ? (
+                      <Link
+                        to={`/superadmin/resorts/${resort.id}/map`}
+                        className="text-xs font-medium text-[var(--accent)] hover:opacity-80"
+                      >
+                        Map editor
+                      </Link>
+                    ) : null}
+                    {resort.gallery_enabled ? (
+                      <Link
+                        to={`/superadmin/resorts/${resort.id}/gallery`}
+                        className="text-xs font-medium text-[var(--accent)] hover:opacity-80"
+                      >
+                        Gallery
+                      </Link>
+                    ) : null}
+                    {resort.info_enabled ? (
+                      <Link
+                        to={`/superadmin/resorts/${resort.id}/info`}
+                        className="text-xs font-medium text-[var(--accent)] hover:opacity-80"
+                      >
+                        Info
+                      </Link>
+                    ) : null}
+                  </div>
+                </td>
                 <td className="px-4 py-3 text-gray-600">
                   {resort.chalet_weekday_limit} / {resort.chalet_weekend_limit}
                 </td>
@@ -288,7 +372,7 @@ export function SuperResortsPage() {
             ))}
             {resorts.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
+                <td colSpan={7} className="px-4 py-10 text-center text-gray-400">
                   No resorts yet.
                 </td>
               </tr>
@@ -497,6 +581,32 @@ export function SuperResortsPage() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-3 rounded-2xl border border-[#ECECEC] bg-[#FAFAFA] p-4">
+              <p className="text-sm font-semibold text-[#1A1A1A]">Guest app features</p>
+              {(
+                [
+                  ['marketplace_listings_enabled', 'Marketplace listings'],
+                  ['map_enabled', 'Interactive map'],
+                  ['events_enabled', 'Events calendar'],
+                  ['gallery_enabled', 'Photo gallery'],
+                  ['info_enabled', 'Guest info & FAQ'],
+                ] as const
+              ).map(([key, label]) => (
+                <label
+                  key={key}
+                  className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-white px-4 py-3"
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-gray-300"
+                    checked={form[key]}
+                    onChange={(e) => setForm({ ...form, [key]: e.target.checked })}
+                  />
+                  <span className="text-sm font-medium text-[#1A1A1A]">{label}</span>
+                </label>
+              ))}
             </div>
 
             {formError ? <p className="text-sm text-red-600">{formError}</p> : null}

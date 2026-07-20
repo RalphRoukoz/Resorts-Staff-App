@@ -29,6 +29,7 @@
     "analytics": "التحليلات",
     "announcements": "الإعلانات",
     "listings": "السوق",
+    "events": "الفعاليات",
     "receptionStaff": "موظفو الاستقبال",
     "viewers": "مشاهدو اللوحة",
     "roles": "الأدوار والصلاحيات",
@@ -166,6 +167,7 @@
     "dashboard.write": "كتابة كاملة للوحة",
     "invitations.bonus": "منح أو إزالة دعوات إضافية",
     "announcements.write": "إدارة الإعلانات",
+    "events.write": "إدارة الفعاليات",
     "listings.write": "إدارة قوائم البيع والإيجار",
     "staff.manage": "إدارة حسابات الموظفين",
     "config.write": "تعديل الإعدادات",
@@ -202,5 +204,23 @@
     "ends": "ينتهي",
     "unit": "الوحدة",
     "noRentals": "لا إيجارات نشطة."
+  },
+  "events": {
+    "title": "الفعاليات",
+    "subtitle": "جدولة ونشر فعاليات تطبيق الضيوف.",
+    "loading": "جاري تحميل الفعاليات…",
+    "add": "فعالية جديدة",
+    "edit": "تعديل",
+    "empty": "لا فعاليات بعد.",
+    "published": "منشور",
+    "draft": "مسودة",
+    "disabledHint": "الفعاليات معطّلة لهذا المنتجع.",
+    "fieldTitle": "العنوان",
+    "fieldDescription": "الوصف",
+    "fieldStarts": "البداية",
+    "fieldEnds": "النهاية (اختياري)",
+    "fieldLocation": "موقع",
+    "fieldPoi": "مكان على الخريطة",
+    "fieldCover": "صورة الغلاف"
   }
 }

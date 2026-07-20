@@ -24,7 +24,6 @@ export function ResortConfigPage() {
   const [cabineLimitInvites, setCabineLimitInvites] = useState(true)
   const [cabinePaidInvites, setCabinePaidInvites] = useState(false)
   const [chaletDoubleScan, setChaletDoubleScan] = useState(false)
-  const [marketplaceListingsEnabled, setMarketplaceListingsEnabled] = useState(true)
   const [periodStart, setPeriodStart] = useState('')
   const [periodEnd, setPeriodEnd] = useState('')
   const [periodAllowanceMode, setPeriodAllowanceMode] = useState<PeriodAllowanceMode>('monthly_within_period')
@@ -61,7 +60,6 @@ export function ResortConfigPage() {
       setCabineLimitInvites(row.cabine_limit_invites ?? true)
       setCabinePaidInvites(row.cabine_paid_invites ?? false)
       setChaletDoubleScan(row.chalet_double_scan ?? false)
-      setMarketplaceListingsEnabled(row.marketplace_listings_enabled ?? true)
       setPeriodStart(row.invitation_period_start ?? '')
       setPeriodEnd(row.invitation_period_end ?? '')
       setPeriodAllowanceMode(row.period_allowance_mode ?? 'monthly_within_period')
@@ -108,7 +106,6 @@ export function ResortConfigPage() {
         cabine_limit_invites: cabineLimitInvites,
         cabine_paid_invites: cabinePaidInvites,
         chalet_double_scan: chaletDoubleScan,
-        marketplace_listings_enabled: marketplaceListingsEnabled,
         invitation_period_mode: 'whole_period',
         invitation_period_start: periodStart,
         invitation_period_end: periodEnd,
@@ -242,20 +239,6 @@ export function ResortConfigPage() {
           <span>
             <span className="block text-sm font-medium text-[#1A1A1A]">{t('config.chaletDoubleScan')}</span>
             <span className="mt-0.5 block text-sm text-gray-500">{t('config.chaletDoubleScanHint')}</span>
-          </span>
-        </label>
-
-        <h3 className="text-lg font-medium text-[#1A1A1A]">{t('config.marketplaceTitle')}</h3>
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-4 py-3">
-          <input
-            type="checkbox"
-            className="mt-1 h-4 w-4 rounded border-gray-300"
-            checked={marketplaceListingsEnabled}
-            onChange={(e) => setMarketplaceListingsEnabled(e.target.checked)}
-          />
-          <span>
-            <span className="block text-sm font-medium text-[#1A1A1A]">{t('config.marketplaceEnabled')}</span>
-            <span className="mt-0.5 block text-sm text-gray-500">{t('config.marketplaceEnabledHint')}</span>
           </span>
         </label>
 
