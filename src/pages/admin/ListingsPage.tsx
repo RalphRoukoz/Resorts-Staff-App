@@ -104,7 +104,7 @@ export function ListingsPage() {
   const [editing, setEditing] = useState<MarketplaceListing | null>(null)
   const [form, setForm] = useState<ListingForm>(emptyForm)
   const [managedImages, setManagedImages] = useState<string[]>([])
-  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [pendingByUrl, setPendingByUrl] = useState<Record<string, File>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -142,11 +142,25 @@ export function ListingsPage() {
     return `${listings.length} ${typeFilter} listings`
   }, [listings.length, typeFilter])
 
+  function revokePendingUrls(urls: string[]) {
+    setPendingByUrl((prev) => {
+      const next = { ...prev }
+      for (const url of urls) {
+        if (next[url]) {
+          URL.revokeObjectURL(url)
+          delete next[url]
+        }
+      }
+      return next
+    })
+  }
+
   function openCreate() {
     setEditing(null)
     setForm(emptyForm())
+    revokePendingUrls(Object.keys(pendingByUrl))
     setManagedImages([])
-    setPendingFiles([])
+    setPendingByUrl({})
     setFormError(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
     setModalOpen(true)
@@ -155,8 +169,9 @@ export function ListingsPage() {
   function openEdit(item: MarketplaceListing) {
     setEditing(item)
     setForm(formFromListing(item))
+    revokePendingUrls(Object.keys(pendingByUrl))
     setManagedImages([...(item.images ?? [])])
-    setPendingFiles([])
+    setPendingByUrl({})
     setFormError(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
     setModalOpen(true)
@@ -175,7 +190,35 @@ export function ListingsPage() {
   }
 
   function removeManagedImage(index: number) {
-    setManagedImages((prev) => prev.filter((_, i) => i !== index))
+    setManagedImages((prev) => {
+      const url = prev[index]
+      if (url && pendingByUrl[url]) {
+        URL.revokeObjectURL(url)
+        setPendingByUrl((map) => {
+          const next = { ...map }
+          delete next[url]
+          return next
+        })
+      }
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  function onPickImages(fileList: FileList | null) {
+    const remaining = Math.max(0, MAX_IMAGES - managedImages.length)
+    const files = Array.from(fileList ?? []).slice(0, remaining)
+    if (files.length === 0) return
+
+    const additions: string[] = []
+    const pending: Record<string, File> = {}
+    for (const file of files) {
+      const url = URL.createObjectURL(file)
+      additions.push(url)
+      pending[url] = file
+    }
+    setManagedImages((prev) => [...prev, ...additions])
+    setPendingByUrl((prev) => ({ ...prev, ...pending }))
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   async function uploadFiles(listingId: string, files: File[]): Promise<string[]> {
@@ -228,8 +271,9 @@ export function ListingsPage() {
       return
     }
 
-    const existingCount = managedImages.length
-    if (existingCount + pendingFiles.length > MAX_IMAGES) {
+    const existingRemote = managedImages.filter((url) => !pendingByUrl[url]).length
+    const pendingCount = managedImages.filter((url) => pendingByUrl[url]).length
+    if (existingRemote + pendingCount > MAX_IMAGES) {
       setFormError(`Maximum ${MAX_IMAGES} images per listing`)
       return
     }
@@ -259,8 +303,11 @@ export function ListingsPage() {
 
     try {
       let listingId = editing?.id
-      let images = [...managedImages]
       const previousImages = editing?.images ?? []
+      const orderedUrls = [...managedImages]
+      const filesToUpload = orderedUrls
+        .map((url) => pendingByUrl[url])
+        .filter((file): file is File => Boolean(file))
 
       if (editing) {
         const { error: updateError } = await supabase
@@ -284,15 +331,21 @@ export function ListingsPage() {
 
       if (!listingId) throw new Error('Missing listing id')
 
-      if (pendingFiles.length > 0) {
-        const uploaded = await uploadFiles(listingId, pendingFiles)
-        images = [...images, ...uploaded]
-      }
+      const uploaded = await uploadFiles(listingId, filesToUpload)
+      let uploadCursor = 0
+      const images = orderedUrls.map((url) => {
+        if (pendingByUrl[url]) {
+          const next = uploaded[uploadCursor]
+          uploadCursor += 1
+          return next
+        }
+        return url
+      })
 
       const cover = images[0] ?? null
       const imagesChanged =
         !editing ||
-        pendingFiles.length > 0 ||
+        filesToUpload.length > 0 ||
         previousImages.length !== images.length ||
         previousImages.some((url, i) => url !== images[i]) ||
         (editing.cover_url ?? null) !== cover
@@ -315,6 +368,10 @@ export function ListingsPage() {
         await supabase.storage.from(FILES_BUCKET).remove(removedPaths)
       }
 
+      for (const url of Object.keys(pendingByUrl)) {
+        URL.revokeObjectURL(url)
+      }
+      setPendingByUrl({})
       setModalOpen(false)
       await loadListings()
     } catch (err) {
@@ -658,17 +715,12 @@ export function ListingsPage() {
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/gif"
                 multiple
-                onChange={(e) => {
-                  const remaining = Math.max(0, MAX_IMAGES - managedImages.length)
-                  setPendingFiles(Array.from(e.target.files ?? []).slice(0, remaining))
-                }}
+                onChange={(e) => onPickImages(e.target.files)}
                 className="block text-sm text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium"
               />
-              {pendingFiles.length > 0 ? (
-                <p className="mt-1 text-xs text-gray-500">
-                  {pendingFiles.length} new file{pendingFiles.length === 1 ? '' : 's'} will upload on save
-                </p>
-              ) : null}
+              <p className="mt-1 text-xs text-gray-500">
+                Select multiple images — previews appear immediately. First image is the cover. Upload happens on save.
+              </p>
             </div>
           </div>
         </Modal>
