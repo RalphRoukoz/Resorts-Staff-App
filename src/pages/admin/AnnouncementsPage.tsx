@@ -17,10 +17,41 @@ import type { Announcement, Audience } from '../../types/database'
 
 const FILES_BUCKET = 'announcement-files'
 
-const audienceLabels: Record<Audience, string> = {
-  chalet: 'Chalets',
-  cabine: 'Cabines',
-  both: 'Everyone',
+type SendToPreset = 'all_guests' | 'cabine' | 'chalet_cabine'
+
+const SEND_TO_OPTIONS: { value: SendToPreset; label: string; hint: string }[] = [
+  {
+    value: 'all_guests',
+    label: 'All users (including guests)',
+    hint: 'Chalet + cabine owners, and visible on Explore for guests',
+  },
+  {
+    value: 'cabine',
+    label: 'Cabines only',
+    hint: 'Only cabine owners and tenants in the owner app',
+  },
+  {
+    value: 'chalet_cabine',
+    label: 'Chalets and cabines',
+    hint: 'All unit owners/tenants — not shown to unsigned guests',
+  },
+]
+
+function presetFromAnnouncement(item: Announcement): SendToPreset {
+  if (item.is_public && item.audience === 'both') return 'all_guests'
+  if (item.audience === 'cabine') return 'cabine'
+  return 'chalet_cabine'
+}
+
+function presetLabel(item: Announcement): string {
+  const preset = presetFromAnnouncement(item)
+  return SEND_TO_OPTIONS.find((o) => o.value === preset)?.label ?? item.audience
+}
+
+function fieldsFromPreset(preset: SendToPreset): { audience: Audience; is_public: boolean } {
+  if (preset === 'all_guests') return { audience: 'both', is_public: true }
+  if (preset === 'cabine') return { audience: 'cabine', is_public: false }
+  return { audience: 'both', is_public: false }
 }
 
 export function AnnouncementsPage() {
@@ -33,10 +64,9 @@ export function AnnouncementsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
-  const [audience, setAudience] = useState<Audience>('both')
+  const [sendTo, setSendTo] = useState<SendToPreset>('chalet_cabine')
   const [expiryPreset, setExpiryPreset] = useState<AnnouncementExpiryPreset>('never')
   const [customExpiresAt, setCustomExpiresAt] = useState('')
-  const [isPublic, setIsPublic] = useState(false)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -65,10 +95,9 @@ export function AnnouncementsPage() {
   function openCreate() {
     setTitle('')
     setBody('')
-    setAudience('both')
+    setSendTo('chalet_cabine')
     setExpiryPreset('never')
     setCustomExpiresAt('')
-    setIsPublic(false)
     setPdfFile(null)
     setFormError(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -114,6 +143,8 @@ export function AnnouncementsPage() {
       pdfUrl = publicData.publicUrl
     }
 
+    const { audience, is_public } = fieldsFromPreset(sendTo)
+
     const { error: insertError } = await supabase.from('announcements').insert({
       resort_id: resortId,
       title: title.trim(),
@@ -121,7 +152,7 @@ export function AnnouncementsPage() {
       audience,
       pdf_url: pdfUrl,
       expires_at: expiresAt,
-      is_public: isPublic,
+      is_public,
     })
 
     if (insertError) {
@@ -178,13 +209,8 @@ export function AnnouncementsPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-lg font-medium text-[#1A1A1A]">{item.title}</h3>
                     <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                      {audienceLabels[item.audience]}
+                      {presetLabel(item)}
                     </span>
-                    {item.is_public ? (
-                      <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-700">
-                        Public (guest app)
-                      </span>
-                    ) : null}
                     {item.expires_at ? (
                       <span
                         className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -259,30 +285,21 @@ export function AnnouncementsPage() {
               />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-gray-700">Audience</span>
+              <span className="mb-1.5 block text-sm font-medium text-gray-700">Send to</span>
               <select
                 className="w-full rounded-xl border border-[#ECECEC] bg-white px-3.5 py-2.5 text-[#1A1A1A] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
-                value={audience}
-                onChange={(e) => setAudience(e.target.value as Audience)}
+                value={sendTo}
+                onChange={(e) => setSendTo(e.target.value as SendToPreset)}
               >
-                <option value="both">Everyone</option>
-                <option value="chalet">Chalets only</option>
-                <option value="cabine">Cabines only</option>
+                {SEND_TO_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
-            </label>
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-4 py-3">
-              <input
-                type="checkbox"
-                className="mt-1 h-4 w-4 rounded border-gray-300"
-                checked={isPublic}
-                onChange={(e) => setIsPublic(e.target.checked)}
-              />
-              <span>
-                <span className="block text-sm font-medium text-[#1A1A1A]">Show on guest Explore home</span>
-                <span className="mt-0.5 block text-sm text-gray-500">
-                  Visible to unsigned guests in the owner app Explore tab.
-                </span>
-              </span>
+              <p className="mt-1.5 text-xs text-gray-500">
+                {SEND_TO_OPTIONS.find((o) => o.value === sendTo)?.hint}
+              </p>
             </label>
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium text-gray-700">Auto-remove after</span>
