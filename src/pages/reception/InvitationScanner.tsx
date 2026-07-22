@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Html5Qrcode } from 'html5-qrcode'
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
@@ -103,17 +103,20 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
     primeAudio()
     await stopScanner()
 
-    const scanner = new Html5Qrcode('qr-reader')
+    const scanner = new Html5Qrcode('qr-reader', {
+      formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+      verbose: false,
+    })
     scannerRef.current = scanner
 
     try {
       await scanner.start(
         { facingMode: 'environment' },
         {
-          fps: 12,
+          fps: 18,
           qrbox: (viewfinderWidth, viewfinderHeight) => {
             const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.72)
-            return { width: edge, height: edge }
+            return { width: Math.max(180, edge), height: Math.max(180, edge) }
           },
           aspectRatio: 1,
           disableFlip: false,
