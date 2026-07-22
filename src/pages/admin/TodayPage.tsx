@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
@@ -7,14 +7,27 @@ import { displayPhone } from '../../lib/phone'
 import { supabase } from '../../lib/supabase'
 import type { InvitationWithChalet } from '../../types/database'
 
+type VisitorRow = {
+  id: string
+  visitor_name: string
+  visitor_phone: string | null
+  visit_date: string
+  notes: string | null
+  status: string
+  assets: { label: string; resort_id: string } | null
+}
+
 export function TodayPage() {
   const { t } = useTranslation()
   const { resortId } = useAuth()
   const [expected, setExpected] = useState<InvitationWithChalet[]>([])
   const [checkedIn, setCheckedIn] = useState<InvitationWithChalet[]>([])
+  const [visitors, setVisitors] = useState<VisitorRow[]>([])
   const [usedThisMonth, setUsedThisMonth] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [visitorQuery, setVisitorQuery] = useState('')
 
   const loadData = useCallback(async () => {
     if (!resortId) return
@@ -56,6 +69,24 @@ export function TodayPage() {
       errors.push(checkedInResult.error.message)
     } else {
       setCheckedIn((checkedInResult.data ?? []) as InvitationWithChalet[])
+    }
+
+    const visitorsResult = await supabase
+      .from('visitor_announcements')
+      .select('id, visitor_name, visitor_phone, visit_date, notes, status, assets(label, resort_id)')
+      .eq('resort_id', resortId)
+      .eq('visit_date', today)
+      .eq('status', 'announced')
+      .order('visitor_name')
+
+    if (visitorsResult.error) {
+      // Table may not exist until migration is applied — don't block Today.
+      if (!/visitor_announcements|schema cache/i.test(visitorsResult.error.message)) {
+        errors.push(visitorsResult.error.message)
+      }
+      setVisitors([])
+    } else {
+      setVisitors((visitorsResult.data ?? []) as unknown as VisitorRow[])
     }
 
     const monthResult = await supabase.rpc('resort_invitation_status_counts', {
@@ -103,6 +134,39 @@ export function TodayPage() {
     void loadData()
   }, [loadData])
 
+  const filteredVisitors = useMemo(() => {
+    const q = visitorQuery.trim().toLowerCase()
+    if (!q) return visitors
+    return visitors.filter(
+      (v) =>
+        v.visitor_name.toLowerCase().includes(q) ||
+        (v.visitor_phone ?? '').includes(q) ||
+        (v.assets?.label ?? '').toLowerCase().includes(q),
+    )
+  }, [visitors, visitorQuery])
+
+  async function markArrived(id: string) {
+    setBusyId(id)
+    const { error: rpcError } = await supabase.rpc('mark_visitor_arrived', { p_id: id })
+    setBusyId(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    await loadData()
+  }
+
+  async function cancelVisitor(id: string) {
+    setBusyId(id)
+    const { error: rpcError } = await supabase.rpc('cancel_visitor', { p_id: id })
+    setBusyId(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    await loadData()
+  }
+
   if (loading) return <Spinner label={t('common.loading')} />
 
   return (
@@ -114,6 +178,30 @@ export function TodayPage() {
       {error ? (
         <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       ) : null}
+
+      <section>
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-medium text-[#1A1A1A]">{t('today.expectedVisitors')}</h3>
+            <p className="mt-1 text-sm text-gray-500">{t('today.visitorsHint')}</p>
+          </div>
+          <input
+            type="search"
+            value={visitorQuery}
+            onChange={(e) => setVisitorQuery(e.target.value)}
+            placeholder={t('today.searchVisitors')}
+            className="h-10 w-full max-w-xs rounded-xl border border-[#ECECEC] bg-white px-3 text-sm text-[#1A1A1A] outline-none focus:border-[#1A1A1A]/30"
+          />
+        </div>
+        <VisitorTable
+          rows={filteredVisitors}
+          emptyMessage={t('today.noExpectedVisitors')}
+          busyId={busyId}
+          onArrive={markArrived}
+          onCancel={cancelVisitor}
+          t={t}
+        />
+      </section>
 
       <section>
         <h3 className="mb-3 text-lg font-medium text-[#1A1A1A]">{t('today.expected')}</h3>
@@ -132,6 +220,75 @@ export function TodayPage() {
           <p className="tnum mt-2 text-3xl font-semibold tracking-tight text-[#1A1A1A]">{usedThisMonth}</p>
         </div>
       </section>
+    </div>
+  )
+}
+
+function VisitorTable({
+  rows,
+  emptyMessage,
+  busyId,
+  onArrive,
+  onCancel,
+  t,
+}: {
+  rows: VisitorRow[]
+  emptyMessage: string
+  busyId: string | null
+  onArrive: (id: string) => void
+  onCancel: (id: string) => void
+  t: (key: string) => string
+}) {
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
+      <table className="min-w-full text-left text-sm">
+        <thead className="bg-[#FAFAFA] text-[11px] uppercase tracking-wider text-gray-400">
+          <tr>
+            <th className="px-4 py-3 font-medium">{t('today.guest')}</th>
+            <th className="px-4 py-3 font-medium">{t('today.phone')}</th>
+            <th className="px-4 py-3 font-medium">{t('today.unit')}</th>
+            <th className="px-4 py-3 font-medium">{t('today.notes')}</th>
+            <th className="px-4 py-3 font-medium">{t('today.actions')}</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {rows.map((row) => (
+            <tr key={row.id} className="transition hover:bg-gray-50">
+              <td className="px-4 py-3 font-medium text-[#1A1A1A]">{row.visitor_name}</td>
+              <td className="px-4 py-3 text-gray-600">{displayPhone(row.visitor_phone)}</td>
+              <td className="px-4 py-3 text-gray-600">{row.assets?.label ?? '—'}</td>
+              <td className="max-w-[14rem] truncate px-4 py-3 text-gray-600">{row.notes || '—'}</td>
+              <td className="px-4 py-3">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={busyId === row.id}
+                    onClick={() => onArrive(row.id)}
+                    className="rounded-lg bg-[#1A1A1A] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                  >
+                    {t('today.markArrived')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyId === row.id}
+                    onClick={() => onCancel(row.id)}
+                    className="rounded-lg border border-[#ECECEC] bg-white px-3 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50"
+                  >
+                    {t('today.cancelVisitor')}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="px-4 py-10 text-center text-gray-400">
+                {emptyMessage}
+              </td>
+            </tr>
+          ) : null}
+        </tbody>
+      </table>
     </div>
   )
 }
