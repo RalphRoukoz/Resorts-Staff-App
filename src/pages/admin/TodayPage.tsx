@@ -71,6 +71,9 @@ export function TodayPage() {
       setCheckedIn((checkedInResult.data ?? []) as InvitationWithChalet[])
     }
 
+    // Expire past announced visitors (idempotent) so desk stays clean.
+    await supabase.rpc('expire_visitor_announcements')
+
     const visitorsResult = await supabase
       .from('visitor_announcements')
       .select('id, visitor_name, visitor_phone, visit_date, notes, status, assets(label, resort_id)')
