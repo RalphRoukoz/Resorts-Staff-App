@@ -109,7 +109,15 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
     try {
       await scanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 280, height: 280 } },
+        {
+          fps: 12,
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.72)
+            return { width: edge, height: edge }
+          },
+          aspectRatio: 1,
+          disableFlip: false,
+        },
         (decodedText) => void handleScan(decodedText),
         () => {},
       )
@@ -229,13 +237,17 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col items-center justify-center px-4 pb-8 pt-6">
+      <div className="flex flex-1 flex-col items-center justify-center px-4 pb-8 pt-6" dir="ltr">
         {processing ? (
           <p className="mb-4 text-lg font-medium text-[#1A1A1A]">{t('scanner.validating')}</p>
         ) : (
           <p className="mb-4 text-center text-gray-500">{t('scanner.pointCamera')}</p>
         )}
-        <div id="qr-reader" className="w-full max-w-md overflow-hidden rounded-2xl border border-[#ECECEC] bg-white shadow-sm" />
+        <div
+          id="qr-reader"
+          className="w-full max-w-md overflow-hidden rounded-2xl border border-[#ECECEC] bg-white shadow-sm [&_video]:!scale-x-100"
+          style={{ direction: 'ltr' }}
+        />
         {cameraError ? <p className="mt-4 max-w-md text-center text-sm text-red-600">{cameraError}</p> : null}
       </div>
     </div>

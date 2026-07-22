@@ -11,7 +11,16 @@ export async function scanInvitation(
   })
 
   if (error) {
-    return { ok: false, reason: error.message }
+    // PostgREST uuid cast failures show up as 22P02 / invalid input syntax
+    const msg = error.message || 'UNKNOWN'
+    if (/uuid|22P02|invalid input syntax/i.test(msg)) {
+      return { ok: false, reason: 'EMPTY_TOKEN' }
+    }
+    return { ok: false, reason: msg }
+  }
+
+  if (data == null || typeof data !== 'object') {
+    return { ok: false, reason: 'UNKNOWN' }
   }
 
   const row = data as Record<string, unknown>
