@@ -68,9 +68,12 @@ export function EventsPage() {
     const [eventsRes, poisRes] = await Promise.all([
       supabase
         .from('resort_events')
-        .select('*')
+        .select(
+          'id, resort_id, title, description, cover_url, starts_at, ends_at, location_label, poi_id, is_published, created_at, updated_at',
+        )
         .eq('resort_id', resortId)
-        .order('starts_at', { ascending: false }),
+        .order('starts_at', { ascending: false })
+        .limit(200),
       supabase
         .from('resort_map_pois')
         .select('id, title')

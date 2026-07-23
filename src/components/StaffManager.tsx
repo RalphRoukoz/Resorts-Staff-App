@@ -3,7 +3,7 @@ import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { Modal } from './ui/Modal'
 import { Spinner } from './ui/Spinner'
-import { createStaffAccount, resetStaffPassword } from '../lib/edgeFunctions'
+import { createStaffAccount, deleteStaffAccount, resetStaffPassword } from '../lib/edgeFunctions'
 import { supabase } from '../lib/supabase'
 import type { ResortStaff } from '../types/database'
 
@@ -105,10 +105,11 @@ export function StaffManager({ resortId, role, headerControl }: StaffManagerProp
 
     const { data, error: fetchError } = await supabase
       .from('resort_staff')
-      .select('*')
+      .select('id, resort_id, user_id, role, resort_role_id, username')
       .eq('resort_id', resortId)
       .eq('role', role)
       .order('username')
+      .limit(200)
 
     if (fetchError) setError(fetchError.message)
     else setStaff((data ?? []) as ResortStaff[])
@@ -194,8 +195,8 @@ export function StaffManager({ resortId, role, headerControl }: StaffManagerProp
   async function handleRemove(row: ResortStaff) {
     if (!confirm(`Remove ${copy.removeNoun} "${row.username ?? 'this account'}"?`)) return
 
-    const { error: deleteError } = await supabase.from('resort_staff').delete().eq('id', row.id)
-    if (deleteError) setError(deleteError.message)
+    const result = await deleteStaffAccount(row.id)
+    if (!result.ok) setError(result.message)
     else await loadStaff()
   }
 

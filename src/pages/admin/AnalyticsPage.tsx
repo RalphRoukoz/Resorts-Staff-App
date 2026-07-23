@@ -48,15 +48,30 @@ interface AnalyticsPayload {
   guest_offset?: number
 }
 
-type VisitorAnalyticsRow = {
-  id: string
-  visitor_name: string
-  visitor_phone: string | null
-  visit_date: string
-  status: string
-  arrived_at: string | null
-  notes: string | null
-  assets: { label: string } | null
+interface VisitorAnalyticsPayload {
+  totals: {
+    visits: number
+    unique_guests: number
+    announced: number
+    arrived: number
+    other: number
+  }
+  daily: { date: string; visits: number }[]
+  by_unit: { label: string; visits: number }[]
+  guests: GuestRow[]
+  guests_total?: number
+  recent: Array<{
+    id: string
+    visitor_name: string
+    visitor_phone: string | null
+    visit_date: string
+    status: string
+    arrived_at: string | null
+    notes: string | null
+    label: string
+  }>
+  date_from: string
+  date_to: string
 }
 
 function monthStartISO(): string {
@@ -69,45 +84,6 @@ function formatChartDate(iso: string): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-function aggregateVisitors(rows: VisitorAnalyticsRow[]) {
-  const arrived = rows.filter((r) => r.status === 'arrived')
-  const announced = rows.filter((r) => r.status === 'announced')
-  const other = rows.filter((r) => r.status !== 'arrived' && r.status !== 'announced')
-
-  const byDayMap = new Map<string, number>()
-  for (const row of arrived) {
-    byDayMap.set(row.visit_date, (byDayMap.get(row.visit_date) ?? 0) + 1)
-  }
-  const daily = [...byDayMap.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, visits]) => ({ date, label: formatChartDate(date), visits }))
-
-  const byUnitMap = new Map<string, number>()
-  for (const row of arrived) {
-    const label = row.assets?.label ?? '—'
-    byUnitMap.set(label, (byUnitMap.get(label) ?? 0) + 1)
-  }
-  const byUnit = [...byUnitMap.entries()]
-    .map(([label, visits]) => ({ label, visits }))
-    .sort((a, b) => b.visits - a.visits)
-
-  const uniqueNames = new Set(arrived.map((r) => r.visitor_name.trim().toLowerCase()).filter(Boolean))
-
-  return {
-    totals: {
-      arrived: arrived.length,
-      announced: announced.length,
-      other: other.length,
-      unique: uniqueNames.size,
-    },
-    daily,
-    byUnit,
-    recentArrivals: [...arrived]
-      .sort((a, b) => (b.arrived_at ?? b.visit_date).localeCompare(a.arrived_at ?? a.visit_date))
-      .slice(0, 50),
-  }
-}
-
 export function AnalyticsPage() {
   const { t } = useTranslation()
   const { resortId, resort } = useAuth()
@@ -115,7 +91,7 @@ export function AnalyticsPage() {
 
   const [lane, setLane] = useState<AnalyticsLane>('invitations')
   const [data, setData] = useState<AnalyticsPayload | null>(null)
-  const [visitorRows, setVisitorRows] = useState<VisitorAnalyticsRow[]>([])
+  const [visitorData, setVisitorData] = useState<VisitorAnalyticsPayload | null>(null)
   const [draftChalet, setDraftChalet] = useState('')
   const [draftGuest, setDraftGuest] = useState('')
   const [draftDateFrom, setDraftDateFrom] = useState(monthStartISO())
@@ -168,43 +144,39 @@ export function AnalyticsPage() {
   const loadVisitorAnalytics = useCallback(async () => {
     if (!resortId) return
     if (isDemoMode()) {
-      setVisitorRows([])
+      setVisitorData(null)
       return
     }
 
-    let query = supabase
-      .from('visitor_announcements')
-      .select('id, visitor_name, visitor_phone, visit_date, status, arrived_at, notes, assets(label)')
-      .eq('resort_id', resortId)
-      .gte('visit_date', appliedDateFrom)
-      .lte('visit_date', appliedDateTo)
-      .order('visit_date', { ascending: false })
-      .limit(2000)
+    const { data: rpcData, error: rpcError } = await supabase.rpc('resort_visitor_analytics_v2', {
+      p_resort_id: resortId,
+      p_asset_id: null,
+      p_date_from: appliedDateFrom,
+      p_date_to: appliedDateTo,
+      p_guest_name: appliedGuest || null,
+      p_guest_limit: GUEST_PAGE_SIZE,
+      p_guest_offset: guestOffset,
+      p_unit_label: appliedChalet || null,
+    })
 
-    if (appliedChalet.trim()) {
-      // Filter after fetch by unit label — PostgREST nested filter is awkward here.
-    }
-
-    const { data: rows, error: fetchError } = await query
-    if (fetchError) {
-      if (!/visitor_announcements|schema cache/i.test(fetchError.message)) {
-        setError(fetchError.message)
+    if (rpcError) {
+      if (!/visitor_announcements|schema cache|resort_visitor_analytics/i.test(rpcError.message)) {
+        setError(rpcError.message)
       }
-      setVisitorRows([])
+      setVisitorData(null)
       return
     }
 
-    let next = (rows ?? []) as unknown as VisitorAnalyticsRow[]
-    const unitQ = appliedChalet.trim().toLowerCase()
-    const guestQ = appliedGuest.trim().toLowerCase()
-    if (unitQ) {
-      next = next.filter((r) => (r.assets?.label ?? '').toLowerCase().includes(unitQ))
+    const payload = rpcData as VisitorAnalyticsPayload & { error?: string }
+    if (payload?.error) {
+      setError(
+        payload.error === 'NOT_AUTHORIZED' ? t('analytics.notAuthorized') : payload.error,
+      )
+      setVisitorData(null)
+      return
     }
-    if (guestQ) {
-      next = next.filter((r) => r.visitor_name.toLowerCase().includes(guestQ))
-    }
-    setVisitorRows(next)
-  }, [resortId, appliedDateFrom, appliedDateTo, appliedChalet, appliedGuest])
+    setVisitorData(payload)
+  }, [resortId, appliedChalet, appliedGuest, appliedDateFrom, appliedDateTo, guestOffset, t])
 
   const loadData = useCallback(async () => {
     if (!resortId) return
@@ -241,9 +213,19 @@ export function AnalyticsPage() {
     setGuestOffset(0)
   }
 
-  const visitorStats = useMemo(() => aggregateVisitors(visitorRows), [visitorRows])
+  const visitorDaily = useMemo(
+    () =>
+      (visitorData?.daily ?? []).map((row) => ({
+        label: formatChartDate(row.date),
+        visits: row.visits,
+      })),
+    [visitorData],
+  )
+  const visitorByUnit = visitorData?.by_unit ?? []
+  const recentArrivals = visitorData?.recent ?? []
+  const hasVisitorData = (visitorData?.totals.arrived ?? 0) + (visitorData?.totals.announced ?? 0) > 0
 
-  if (loading && !data && visitorRows.length === 0) {
+  if (loading && !data && !visitorData) {
     return <Spinner label={t('analytics.loading')} />
   }
 
@@ -257,7 +239,6 @@ export function AnalyticsPage() {
   const guestsTotal = data?.guests_total ?? guests.length
   const guestPageEnd = Math.min(guestOffset + GUEST_PAGE_SIZE, guestsTotal)
   const hasGuestPagination = guestsTotal > GUEST_PAGE_SIZE
-  const hasVisitorData = visitorRows.length > 0
 
   const axisProps = { stroke: '#9ca3af', fontSize: 12 }
   const tooltipStyle = {
@@ -461,22 +442,22 @@ export function AnalyticsPage() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
               label={t('analytics.visitorsArrived')}
-              value={visitorStats.totals.arrived}
+              value={visitorData?.totals.arrived ?? 0}
               accent={brand}
             />
             <KpiCard
               label={t('analytics.visitorsUnique')}
-              value={visitorStats.totals.unique}
+              value={visitorData?.totals.unique_guests ?? 0}
               accent={brand}
             />
             <KpiCard
               label={t('analytics.visitorsPending')}
-              value={visitorStats.totals.announced}
+              value={visitorData?.totals.announced ?? 0}
               accent={brand}
             />
             <KpiCard
               label={t('analytics.visitorsOther')}
-              value={visitorStats.totals.other}
+              value={visitorData?.totals.other ?? 0}
               accent="#64748b"
             />
           </div>
@@ -484,7 +465,7 @@ export function AnalyticsPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <ChartCard title={t('analytics.arrivalsOverTime')}>
               <ResponsiveContainer width="100%" height={240}>
-                <LineChart data={visitorStats.daily}>
+                <LineChart data={visitorDaily}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="label" {...axisProps} interval="preserveStartEnd" />
                   <YAxis allowDecimals={false} {...axisProps} />
@@ -496,13 +477,13 @@ export function AnalyticsPage() {
 
             <ChartCard title={t('analytics.arrivalsByUnit')}>
               <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={visitorStats.byUnit} layout="vertical" margin={{ left: 20 }}>
+                <BarChart data={visitorByUnit} layout="vertical" margin={{ left: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis type="number" allowDecimals={false} {...axisProps} />
                   <YAxis type="category" dataKey="label" width={100} {...axisProps} />
                   <Tooltip contentStyle={tooltipStyle} cursor={{ fill: '#00000008' }} />
                   <Bar dataKey="visits" fill={brand} radius={[0, 4, 4, 0]}>
-                    {visitorStats.byUnit.map((_, i) => (
+                    {visitorByUnit.map((_, i) => (
                       <Cell key={i} fill={brand} />
                     ))}
                   </Bar>
@@ -511,7 +492,7 @@ export function AnalyticsPage() {
             </ChartCard>
           </div>
 
-          {visitorStats.recentArrivals.length > 0 ? (
+          {recentArrivals.length > 0 ? (
             <div className="overflow-hidden rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
               <div className="border-b border-[#ECECEC] px-5 py-4">
                 <h3 className="text-sm font-medium text-gray-700">{t('analytics.recentArrivals')}</h3>
@@ -526,11 +507,11 @@ export function AnalyticsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visitorStats.recentArrivals.map((row) => (
+                  {recentArrivals.map((row) => (
                     <tr key={row.id} className="border-b border-[#ECECEC] last:border-0">
                       <td className="px-5 py-3 font-medium">{row.visitor_name}</td>
                       <td className="px-5 py-3 text-gray-600">{displayPhone(row.visitor_phone)}</td>
-                      <td className="px-5 py-3 text-gray-600">{row.assets?.label ?? '—'}</td>
+                      <td className="px-5 py-3 text-gray-600">{row.label}</td>
                       <td className="px-5 py-3 text-gray-600">{formatDate(row.visit_date)}</td>
                     </tr>
                   ))}

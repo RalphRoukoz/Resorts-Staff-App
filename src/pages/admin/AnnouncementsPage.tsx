@@ -86,9 +86,10 @@ export function AnnouncementsPage() {
 
     const { data, error: fetchError } = await supabase
       .from('announcements')
-      .select('*')
+      .select('id, resort_id, title, body, pdf_url, audience, expires_at, is_public, created_at')
       .eq('resort_id', resortId)
       .order('created_at', { ascending: false })
+      .limit(200)
 
     if (fetchError) setError(fetchError.message)
     else setAnnouncements((data ?? []) as Announcement[])

@@ -5,7 +5,7 @@ import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
-import { createStaffAccount, resetStaffPassword } from '../../lib/edgeFunctions'
+import { createStaffAccount, deleteStaffAccount, resetStaffPassword } from '../../lib/edgeFunctions'
 import {
   ALL_PERMISSIONS,
   PERMISSION_DESCRIPTIONS,
@@ -112,19 +112,23 @@ export function StaffPage() {
     const [staffRes, rolesRes] = await Promise.all([
       supabase
         .from('resort_staff')
-        .select('*, resort_roles(*)')
+        .select(
+          'id, resort_id, user_id, role, resort_role_id, username, resort_roles(id, resort_id, name, permissions, is_owner, is_system, created_at)',
+        )
         .eq('resort_id', resortId)
-        .order('username'),
+        .order('username')
+        .limit(200),
       supabase
         .from('resort_roles')
-        .select('*')
+        .select('id, resort_id, name, permissions, is_owner, is_system, created_at')
         .eq('resort_id', resortId)
         .order('is_owner', { ascending: false })
-        .order('name'),
+        .order('name')
+        .limit(100),
     ])
 
     if (staffRes.error) setError(staffRes.error.message)
-    else setStaff((staffRes.data ?? []) as StaffWithRole[])
+    else setStaff((staffRes.data ?? []) as unknown as StaffWithRole[])
 
     if (rolesRes.error) setError(rolesRes.error.message)
     else setRoles((rolesRes.data ?? []) as ResortRole[])
@@ -264,8 +268,8 @@ export function StaffPage() {
     if (row.resort_roles?.is_owner) return
     if (!confirm(`Remove staff "${row.username ?? 'this account'}"?`)) return
 
-    const { error: deleteError } = await supabase.from('resort_staff').delete().eq('id', row.id)
-    if (deleteError) setError(deleteError.message)
+    const result = await deleteStaffAccount(row.id)
+    if (!result.ok) setError(result.message)
     else await loadData()
   }
 

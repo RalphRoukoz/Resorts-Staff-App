@@ -29,10 +29,11 @@ export function RolesPage() {
     setError(null)
     const { data, error: fetchError } = await supabase
       .from('resort_roles')
-      .select('*')
+      .select('id, resort_id, name, permissions, is_owner, is_system, created_at')
       .eq('resort_id', resortId)
       .order('is_owner', { ascending: false })
       .order('name')
+      .limit(100)
 
     if (fetchError) setError(fetchError.message)
     else setRoles((data ?? []) as ResortRole[])

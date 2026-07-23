@@ -43,102 +43,38 @@ export function TodayPage() {
     setLoading(true)
     setError(null)
 
-    const today = todayISO()
-    const monthStart = `${today.slice(0, 7)}-01`
-    const monthEndDate = new Date(`${today}T12:00:00`)
-    monthEndDate.setMonth(monthEndDate.getMonth() + 1, 0)
-    const monthEnd = monthEndDate.toISOString().slice(0, 10)
-    const errors: string[] = []
-
-    const expectedResult = await supabase
-      .from('invitations')
-      .select('*, assets!inner(label, resort_id)')
-      .eq('assets.resort_id', resortId)
-      .eq('visit_date', today)
-      .eq('status', 'issued')
-      .order('invitee_name')
-
-    if (expectedResult.error) errors.push(expectedResult.error.message)
-    else setExpected((expectedResult.data ?? []) as InvitationWithChalet[])
-
-    const checkedInResult = await supabase
-      .from('invitations')
-      .select('*, assets!inner(label, resort_id)')
-      .eq('assets.resort_id', resortId)
-      .eq('status', 'validated')
-      .gte('validated_at', `${today}T00:00:00`)
-      .lt('validated_at', `${today}T23:59:59.999`)
-      .order('validated_at', { ascending: false })
-
-    if (checkedInResult.error) errors.push(checkedInResult.error.message)
-    else setCheckedIn((checkedInResult.data ?? []) as InvitationWithChalet[])
-
-    await supabase.rpc('expire_visitor_announcements')
-
-    const visitorsResult = await supabase
-      .from('visitor_announcements')
-      .select('id, visitor_name, visitor_phone, visit_date, notes, status, arrived_at, assets(label, resort_id)')
-      .eq('resort_id', resortId)
-      .eq('visit_date', today)
-      .in('status', ['announced', 'arrived'])
-      .order('visitor_name')
-
-    if (visitorsResult.error) {
-      if (!/visitor_announcements|schema cache/i.test(visitorsResult.error.message)) {
-        errors.push(visitorsResult.error.message)
-      }
-      setVisitors([])
-    } else {
-      setVisitors((visitorsResult.data ?? []) as unknown as VisitorRow[])
-    }
-
-    const monthVisitors = await supabase
-      .from('visitor_announcements')
-      .select('id', { count: 'exact', head: true })
-      .eq('resort_id', resortId)
-      .eq('status', 'arrived')
-      .gte('visit_date', monthStart)
-      .lte('visit_date', monthEnd)
-
-    if (!monthVisitors.error) setVisitorsArrivedMonth(monthVisitors.count ?? 0)
-
-    const monthResult = await supabase.rpc('resort_invitation_status_counts', {
+    const { data: deskData, error: deskError } = await supabase.rpc('resort_today_desk', {
       p_resort_id: resortId,
-      p_date_from: monthStart,
-      p_date_to: monthEnd,
     })
 
-    if (monthResult.error) {
-      const fallback = await supabase
-        .from('invitations')
-        .select('id, assets!inner(resort_id)', { count: 'exact', head: true })
-        .eq('assets.resort_id', resortId)
-        .eq('status', 'validated')
-        .gte('validated_at', `${monthStart}T00:00:00`)
-        .lte('validated_at', `${monthEnd}T23:59:59.999`)
-
-      if (fallback.error) {
-        errors.push(monthResult.error.message)
-        setUsedThisMonth(0)
-      } else {
-        setUsedThisMonth(fallback.count ?? 0)
-      }
-    } else if (monthResult.data) {
-      const rows = monthResult.data as Array<{ status: string; count: number }> | { error?: string }
-      if (!Array.isArray(rows)) {
-        if (typeof rows === 'object' && rows && 'error' in rows) {
-          errors.push(String((rows as { error: string }).error))
-        }
-        setUsedThisMonth(0)
-      } else {
-        const validated = rows.find((r) => r.status === 'validated')
-        setUsedThisMonth(validated?.count ?? rows.reduce((sum, r) => sum + r.count, 0))
-      }
+    if (deskError) {
+      setError(deskError.message)
+      setLoading(false)
+      return
     }
 
-    if (errors.length > 0) setError(errors[0])
+    const payload = deskData as {
+      error?: string
+      expected_invitations?: InvitationWithChalet[]
+      checked_in_invitations?: InvitationWithChalet[]
+      visitors?: VisitorRow[]
+      invitations_validated_month?: number
+      visitors_arrived_month?: number
+    } | null
+
+    if (payload?.error) {
+      setError(payload.error === 'NOT_AUTHORIZED' ? t('common.notAuthorized', { defaultValue: 'Not authorized' }) : payload.error)
+      setLoading(false)
+      return
+    }
+
+    setExpected((payload?.expected_invitations ?? []) as InvitationWithChalet[])
+    setCheckedIn((payload?.checked_in_invitations ?? []) as InvitationWithChalet[])
+    setVisitors((payload?.visitors ?? []) as VisitorRow[])
+    setUsedThisMonth(payload?.invitations_validated_month ?? 0)
+    setVisitorsArrivedMonth(payload?.visitors_arrived_month ?? 0)
     setLoading(false)
-  }, [resortId])
+  }, [resortId, t])
 
   useEffect(() => {
     void loadData()

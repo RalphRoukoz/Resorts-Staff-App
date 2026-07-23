@@ -80,6 +80,13 @@ export function SuperMapEditorPage() {
   const [poiFormError, setPoiFormError] = useState<string | null>(null)
   const [savingPoi, setSavingPoi] = useState(false)
   const [draggingPoiId, setDraggingPoiId] = useState<string | null>(null)
+  const [sourceResorts, setSourceResorts] = useState<Array<{ id: string; name: string; map_image_url: string | null; poi_count: number }>>([])
+  const [copySourceId, setCopySourceId] = useState('')
+  const [copyMapImage, setCopyMapImage] = useState(true)
+  const [copyPois, setCopyPois] = useState(true)
+  const [copyReplacePois, setCopyReplacePois] = useState(false)
+  const [copying, setCopying] = useState(false)
+  const [copyMessage, setCopyMessage] = useState<string | null>(null)
   const mapInputRef = useRef<HTMLInputElement>(null)
   const mapCanvasRef = useRef<HTMLDivElement>(null)
   const dragMovedRef = useRef(false)
@@ -100,9 +107,14 @@ export function SuperMapEditorPage() {
     if (!resortId) return
     setLoading(true)
     setError(null)
-    const [resortRes, poisRes] = await Promise.all([
+    const [resortRes, poisRes, sourcesRes] = await Promise.all([
       supabase.from('resorts').select('name, map_enabled, map_image_url').eq('id', resortId).single(),
       supabase.from('resort_map_pois').select('*').eq('resort_id', resortId).order('sort_order'),
+      supabase
+        .from('resorts')
+        .select('id, name, map_image_url')
+        .neq('id', resortId)
+        .order('name'),
     ])
     if (resortRes.error) setError(resortRes.error.message)
     else {
@@ -113,6 +125,26 @@ export function SuperMapEditorPage() {
     }
     if (poisRes.error) setError(poisRes.error.message)
     else setPois((poisRes.data ?? []) as ResortMapPoi[])
+
+    if (!sourcesRes.error) {
+      const rows = (sourcesRes.data ?? []) as Array<{ id: string; name: string; map_image_url: string | null }>
+      const withCounts = await Promise.all(
+        rows.map(async (row) => {
+          const { count } = await supabase
+            .from('resort_map_pois')
+            .select('id', { count: 'exact', head: true })
+            .eq('resort_id', row.id)
+          return {
+            id: row.id,
+            name: row.name,
+            map_image_url: row.map_image_url,
+            poi_count: count ?? 0,
+          }
+        }),
+      )
+      setSourceResorts(withCounts.filter((r) => r.map_image_url || r.poi_count > 0))
+    }
+
     setLoading(false)
   }, [resortId])
 
@@ -121,14 +153,111 @@ export function SuperMapEditorPage() {
     return () => window.clearTimeout(timer)
   }, [load])
 
-  async function uploadGuestFile(file: File, subfolder: string) {
-    const ext = file.name.split('.').pop() || 'jpg'
-    const path = `${resortId}/${subfolder}/${Date.now()}.${ext}`
+  async function uploadGuestFile(file: File | Blob, subfolder: string, contentType?: string, ext = 'jpg') {
+    const resolvedType = contentType || (file instanceof File ? file.type : 'image/jpeg') || 'image/jpeg'
+    const resolvedExt =
+      file instanceof File && file.name.includes('.')
+        ? (file.name.split('.').pop() || ext)
+        : ext
+    const path = `${resortId}/${subfolder}/${Date.now()}.${resolvedExt}`
     const { error: uploadError } = await supabase.storage
       .from(GUEST_BUCKET)
-      .upload(path, file, { upsert: false, contentType: file.type })
+      .upload(path, file, { upsert: false, contentType: resolvedType })
     if (uploadError) throw uploadError
     return supabase.storage.from(GUEST_BUCKET).getPublicUrl(path).data.publicUrl
+  }
+
+  async function copyStorageUrlToResort(sourceUrl: string, subfolder: string) {
+    const response = await fetch(sourceUrl)
+    if (!response.ok) throw new Error(`Could not download map asset (${response.status})`)
+    const blob = await response.blob()
+    const type = blob.type || 'image/jpeg'
+    const ext = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : type.includes('gif') ? 'gif' : 'jpg'
+    return uploadGuestFile(blob, subfolder, type, ext)
+  }
+
+  async function handleCopyFromResort() {
+    if (!resortId || !copySourceId) return
+    if (!copyMapImage && !copyPois) {
+      setError('Choose at least map image or places to copy.')
+      return
+    }
+    const source = sourceResorts.find((r) => r.id === copySourceId)
+    if (!source) return
+
+    const confirmMsg = [
+      `Copy from "${source.name}" into "${resortName}"?`,
+      copyMapImage ? '• Map image' : null,
+      copyPois
+        ? copyReplacePois
+          ? `• Places (replace existing ${pois.length})`
+          : `• Places (add ${source.poi_count} to existing)`
+        : null,
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    if (!confirm(confirmMsg)) return
+
+    setCopying(true)
+    setError(null)
+    setCopyMessage(null)
+    try {
+      if (copyMapImage) {
+        if (!source.map_image_url) throw new Error('Source resort has no map image.')
+        const url = await copyStorageUrlToResort(source.map_image_url, 'map')
+        const { error: updateError } = await supabase
+          .from('resorts')
+          .update({ map_image_url: url })
+          .eq('id', resortId)
+        if (updateError) throw updateError
+        setMapImageUrl(url)
+        setMapFile(null)
+      }
+
+      if (copyPois) {
+        const { data: sourcePois, error: poisErr } = await supabase
+          .from('resort_map_pois')
+          .select(
+            'poi_type, title, description, hours_note, x_pct, y_pct, sort_order, is_published, image_url, menu_urls, hours_json',
+          )
+          .eq('resort_id', copySourceId)
+          .order('sort_order')
+        if (poisErr) throw poisErr
+
+        if (copyReplacePois && pois.length > 0) {
+          const { error: wipeErr } = await supabase.from('resort_map_pois').delete().eq('resort_id', resortId)
+          if (wipeErr) throw wipeErr
+        }
+
+        const rows = (sourcePois ?? []).map((poi) => ({
+          resort_id: resortId,
+          poi_type: poi.poi_type,
+          title: poi.title,
+          description: poi.description,
+          hours_note: poi.hours_note,
+          x_pct: poi.x_pct,
+          y_pct: poi.y_pct,
+          sort_order: poi.sort_order,
+          is_published: poi.is_published,
+          image_url: poi.image_url,
+          menu_urls: poi.menu_urls ?? [],
+          hours_json: poi.hours_json ?? null,
+        }))
+
+        if (rows.length > 0) {
+          const { error: insertErr } = await supabase.from('resort_map_pois').insert(rows)
+          if (insertErr) throw insertErr
+        }
+      }
+
+      setCopyMessage(`Copied from ${source.name}.`)
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Copy failed.')
+    } finally {
+      setCopying(false)
+    }
   }
 
   function selectMapFile(file: File | null) {
@@ -321,6 +450,74 @@ export function SuperMapEditorPage() {
       </header>
 
       {error ? <p role="alert" className="mb-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p> : null}
+      {copyMessage ? (
+        <p role="status" className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          {copyMessage}
+        </p>
+      ) : null}
+
+      <section className="mb-4 rounded-2xl border border-[#ECECEC] bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-medium text-[#1A1A1A]">Copy from another resort</h3>
+            <p className="mt-0.5 text-xs text-gray-500">
+              Duplicate an existing map image and/or places into this resort.
+            </p>
+          </div>
+        </div>
+        {sourceResorts.length === 0 ? (
+          <p className="mt-3 text-sm text-gray-400">No other resorts have a map or places yet.</p>
+        ) : (
+          <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-gray-700">Source resort</span>
+              <select
+                className="min-h-11 w-full rounded-xl border border-[#ECECEC] bg-white px-3 text-sm"
+                value={copySourceId}
+                onChange={(e) => setCopySourceId(e.target.value)}
+              >
+                <option value="">Select a resort…</option>
+                {sourceResorts.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                    {r.map_image_url ? ' · map' : ''}
+                    {r.poi_count > 0 ? ` · ${r.poi_count} places` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              onClick={() => void handleCopyFromResort()}
+              disabled={!copySourceId || copying || (!copyMapImage && !copyPois)}
+            >
+              {copying ? 'Copying…' : 'Copy into this map'}
+            </Button>
+          </div>
+        )}
+        <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-700">
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={copyMapImage}
+              onChange={(e) => setCopyMapImage(e.target.checked)}
+            />
+            Map image
+          </label>
+          <label className="inline-flex items-center gap-2">
+            <input type="checkbox" checked={copyPois} onChange={(e) => setCopyPois(e.target.checked)} />
+            Places (POIs)
+          </label>
+          <label className={`inline-flex items-center gap-2 ${copyPois ? '' : 'opacity-40'}`}>
+            <input
+              type="checkbox"
+              checked={copyReplacePois}
+              disabled={!copyPois}
+              onChange={(e) => setCopyReplacePois(e.target.checked)}
+            />
+            Replace existing places
+          </label>
+        </div>
+      </section>
 
       <section className="mb-4 rounded-2xl border border-[#ECECEC] bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">

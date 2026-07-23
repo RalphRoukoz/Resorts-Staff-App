@@ -53,7 +53,23 @@ export function createStaffAccount(payload: StaffAccountPayload): Promise<EdgeRe
     NOT_AUTHENTICATED: 'Your session expired — please sign in again.',
     FORBIDDEN: 'You do not have permission to create this account type.',
     METHOD_NOT_ALLOWED: 'Unexpected request method.',
+    USERNAME_IN_USE: 'That username is already in use at a resort.',
+    USER_CREATE_FAILED: 'Could not create the account. Try again.',
   })
+}
+
+export function deleteStaffAccount(staffId: string): Promise<EdgeResult> {
+  return invokeEdge(
+    'delete-staff-account',
+    { staff_id: staffId },
+    {
+      BAD_INPUT: 'Missing staff id.',
+      NOT_AUTHENTICATED: 'Your session expired — please sign in again.',
+      FORBIDDEN: 'You do not have permission to remove this account.',
+      NOT_FOUND: 'Staff account not found.',
+      METHOD_NOT_ALLOWED: 'Unexpected request method.',
+    },
+  )
 }
 
 export function resetStaffPassword(staffUserId: string, newPassword: string): Promise<EdgeResult> {
