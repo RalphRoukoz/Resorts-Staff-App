@@ -18,7 +18,9 @@ type VisitorRow = {
   assets: { label: string; resort_id: string } | null
 }
 
-type VisitorDeskTab = 'expected' | 'arrived'
+type DeskLane = 'visitors' | 'invitations'
+type VisitorStatus = 'expected' | 'arrived'
+type InviteStatus = 'expected' | 'checked_in'
 
 export function TodayPage() {
   const { t } = useTranslation()
@@ -27,11 +29,14 @@ export function TodayPage() {
   const [checkedIn, setCheckedIn] = useState<InvitationWithChalet[]>([])
   const [visitors, setVisitors] = useState<VisitorRow[]>([])
   const [usedThisMonth, setUsedThisMonth] = useState(0)
+  const [visitorsArrivedMonth, setVisitorsArrivedMonth] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
-  const [visitorQuery, setVisitorQuery] = useState('')
-  const [visitorTab, setVisitorTab] = useState<VisitorDeskTab>('expected')
+  const [query, setQuery] = useState('')
+  const [lane, setLane] = useState<DeskLane>('visitors')
+  const [visitorStatus, setVisitorStatus] = useState<VisitorStatus>('expected')
+  const [inviteStatus, setInviteStatus] = useState<InviteStatus>('expected')
 
   const loadData = useCallback(async () => {
     if (!resortId) return
@@ -43,7 +48,6 @@ export function TodayPage() {
     const monthEndDate = new Date(`${today}T12:00:00`)
     monthEndDate.setMonth(monthEndDate.getMonth() + 1, 0)
     const monthEnd = monthEndDate.toISOString().slice(0, 10)
-
     const errors: string[] = []
 
     const expectedResult = await supabase
@@ -54,11 +58,8 @@ export function TodayPage() {
       .eq('status', 'issued')
       .order('invitee_name')
 
-    if (expectedResult.error) {
-      errors.push(expectedResult.error.message)
-    } else {
-      setExpected((expectedResult.data ?? []) as InvitationWithChalet[])
-    }
+    if (expectedResult.error) errors.push(expectedResult.error.message)
+    else setExpected((expectedResult.data ?? []) as InvitationWithChalet[])
 
     const checkedInResult = await supabase
       .from('invitations')
@@ -69,13 +70,9 @@ export function TodayPage() {
       .lt('validated_at', `${today}T23:59:59.999`)
       .order('validated_at', { ascending: false })
 
-    if (checkedInResult.error) {
-      errors.push(checkedInResult.error.message)
-    } else {
-      setCheckedIn((checkedInResult.data ?? []) as InvitationWithChalet[])
-    }
+    if (checkedInResult.error) errors.push(checkedInResult.error.message)
+    else setCheckedIn((checkedInResult.data ?? []) as InvitationWithChalet[])
 
-    // Expire past announced visitors (idempotent) so desk stays clean.
     await supabase.rpc('expire_visitor_announcements')
 
     const visitorsResult = await supabase
@@ -87,7 +84,6 @@ export function TodayPage() {
       .order('visitor_name')
 
     if (visitorsResult.error) {
-      // Table may not exist until migration is applied — don't block Today.
       if (!/visitor_announcements|schema cache/i.test(visitorsResult.error.message)) {
         errors.push(visitorsResult.error.message)
       }
@@ -95,6 +91,16 @@ export function TodayPage() {
     } else {
       setVisitors((visitorsResult.data ?? []) as unknown as VisitorRow[])
     }
+
+    const monthVisitors = await supabase
+      .from('visitor_announcements')
+      .select('id', { count: 'exact', head: true })
+      .eq('resort_id', resortId)
+      .eq('status', 'arrived')
+      .gte('visit_date', monthStart)
+      .lte('visit_date', monthEnd)
+
+    if (!monthVisitors.error) setVisitorsArrivedMonth(monthVisitors.count ?? 0)
 
     const monthResult = await supabase.rpc('resort_invitation_status_counts', {
       p_resort_id: resortId,
@@ -130,10 +136,7 @@ export function TodayPage() {
       }
     }
 
-    if (errors.length > 0) {
-      setError(errors[0])
-    }
-
+    if (errors.length > 0) setError(errors[0])
     setLoading(false)
   }, [resortId])
 
@@ -147,25 +150,14 @@ export function TodayPage() {
   )
   const arrivedVisitors = useMemo(() => {
     const rows = visitors.filter((v) => v.status === 'arrived')
-    return [...rows].sort((a, b) => {
-      const at = a.arrived_at ?? ''
-      const bt = b.arrived_at ?? ''
-      return bt.localeCompare(at)
-    })
+    return [...rows].sort((a, b) => (b.arrived_at ?? '').localeCompare(a.arrived_at ?? ''))
   }, [visitors])
 
-  const deskVisitors = visitorTab === 'expected' ? expectedVisitors : arrivedVisitors
+  const visitorRows = visitorStatus === 'expected' ? expectedVisitors : arrivedVisitors
+  const inviteRows = inviteStatus === 'expected' ? expected : checkedIn
 
-  const filteredVisitors = useMemo(() => {
-    const q = visitorQuery.trim().toLowerCase()
-    if (!q) return deskVisitors
-    return deskVisitors.filter(
-      (v) =>
-        v.visitor_name.toLowerCase().includes(q) ||
-        (v.visitor_phone ?? '').includes(q) ||
-        (v.assets?.label ?? '').toLowerCase().includes(q),
-    )
-  }, [deskVisitors, visitorQuery])
+  const filteredVisitors = useMemo(() => filterByQuery(visitorRows, query, 'visitor'), [visitorRows, query])
+  const filteredInvites = useMemo(() => filterByQuery(inviteRows, query, 'invite'), [inviteRows, query])
 
   async function markArrived(id: string) {
     setBusyId(id)
@@ -175,7 +167,8 @@ export function TodayPage() {
       setError(rpcError.message)
       return
     }
-    setVisitorTab('arrived')
+    setLane('visitors')
+    setVisitorStatus('arrived')
     await loadData()
   }
 
@@ -192,109 +185,294 @@ export function TodayPage() {
 
   if (loading) return <Spinner label={t('common.loading')} />
 
+  const todayLabel = formatDate(todayISO())
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">{t('today.title')}</h2>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">{t('today.title')}</h2>
+          <p className="mt-1 text-sm text-gray-500">{t('today.subtitle', { date: todayLabel })}</p>
+        </div>
+        <div className="flex flex-wrap gap-2 rounded-2xl border border-[#ECECEC] bg-white px-4 py-3 shadow-sm">
+          <MonthStat label={t('today.monthInvites')} value={usedThisMonth} />
+          <div className="mx-1 hidden h-8 w-px bg-[#ECECEC] sm:block" aria-hidden />
+          <MonthStat label={t('today.monthVisitors')} value={visitorsArrivedMonth} />
+        </div>
       </div>
 
       {error ? (
         <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       ) : null}
 
-      <section>
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-medium text-[#1A1A1A]">{t('today.visitorsDesk')}</h3>
-            <p className="mt-1 text-sm text-gray-500">{t('today.visitorsHint')}</p>
-          </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <SummaryChip
+          label={t('today.kpiVisitorsWaiting')}
+          value={expectedVisitors.length}
+          active={lane === 'visitors' && visitorStatus === 'expected'}
+          onClick={() => {
+            setLane('visitors')
+            setVisitorStatus('expected')
+          }}
+        />
+        <SummaryChip
+          label={t('today.kpiVisitorsArrived')}
+          value={arrivedVisitors.length}
+          active={lane === 'visitors' && visitorStatus === 'arrived'}
+          onClick={() => {
+            setLane('visitors')
+            setVisitorStatus('arrived')
+          }}
+        />
+        <SummaryChip
+          label={t('today.kpiInvitesExpected')}
+          value={expected.length}
+          active={lane === 'invitations' && inviteStatus === 'expected'}
+          onClick={() => {
+            setLane('invitations')
+            setInviteStatus('expected')
+          }}
+        />
+        <SummaryChip
+          label={t('today.kpiInvitesCheckedIn')}
+          value={checkedIn.length}
+          active={lane === 'invitations' && inviteStatus === 'checked_in'}
+          onClick={() => {
+            setLane('invitations')
+            setInviteStatus('checked_in')
+          }}
+        />
+      </div>
+
+      <section className="overflow-hidden rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-[#ECECEC] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <SegmentedControl
+            ariaLabel={t('today.laneLabel')}
+            value={lane}
+            onChange={(next) => {
+              setLane(next)
+              setQuery('')
+            }}
+            options={[
+              { value: 'visitors', label: t('today.laneVisitors') },
+              { value: 'invitations', label: t('today.laneInvitations') },
+            ]}
+          />
           <input
             type="search"
-            value={visitorQuery}
-            onChange={(e) => setVisitorQuery(e.target.value)}
-            placeholder={t('today.searchVisitors')}
-            className="h-10 w-full max-w-xs rounded-xl border border-[#ECECEC] bg-white px-3 text-sm text-[#1A1A1A] outline-none focus:border-[#1A1A1A]/30"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={
+              lane === 'visitors' ? t('today.searchVisitors') : t('today.searchInvitations')
+            }
+            className="h-11 w-full max-w-sm rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-3 text-[16px] text-[#1A1A1A] outline-none focus:border-[#1A1A1A]/30 focus:bg-white"
           />
         </div>
 
-        <div
-          role="tablist"
-          aria-label={t('today.visitorsDesk')}
-          className="mb-3 inline-flex rounded-xl bg-gray-100 p-1"
-        >
-          {(
-            [
-              {
-                key: 'expected' as const,
-                label: t('today.expectedVisitors'),
-                count: expectedVisitors.length,
-              },
-              {
-                key: 'arrived' as const,
-                label: t('today.arrivedVisitors'),
-                count: arrivedVisitors.length,
-              },
-            ] as const
-          ).map((tab) => {
-            const active = visitorTab === tab.key
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setVisitorTab(tab.key)}
-                className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 text-sm font-medium transition ${
-                  active
-                    ? 'bg-white text-[#1A1A1A] shadow-sm'
-                    : 'text-gray-500 hover:text-[#1A1A1A]'
-                }`}
-              >
-                {tab.label}
-                <span
-                  className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
-                    active ? 'bg-[#1A1A1A] text-white' : 'bg-gray-200 text-gray-600'
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            )
-          })}
+        <div className="border-b border-[#ECECEC] px-4 py-3">
+          {lane === 'visitors' ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <StatusTabs
+                ariaLabel={t('today.visitorStatusLabel')}
+                value={visitorStatus}
+                onChange={setVisitorStatus}
+                options={[
+                  {
+                    value: 'expected',
+                    label: t('today.expectedVisitors'),
+                    count: expectedVisitors.length,
+                  },
+                  {
+                    value: 'arrived',
+                    label: t('today.arrivedVisitors'),
+                    count: arrivedVisitors.length,
+                  },
+                ]}
+              />
+              <p className="text-xs text-gray-500">{t('today.visitorsHint')}</p>
+            </div>
+          ) : (
+            <StatusTabs
+              ariaLabel={t('today.inviteStatusLabel')}
+              value={inviteStatus}
+              onChange={setInviteStatus}
+              options={[
+                { value: 'expected', label: t('today.inviteExpected'), count: expected.length },
+                {
+                  value: 'checked_in',
+                  label: t('today.inviteCheckedIn'),
+                  count: checkedIn.length,
+                },
+              ]}
+            />
+          )}
         </div>
 
-        <VisitorTable
-          rows={filteredVisitors}
-          mode={visitorTab}
-          emptyMessage={
-            visitorTab === 'expected'
-              ? t('today.noExpectedVisitors')
-              : t('today.noArrivedVisitors')
-          }
-          busyId={busyId}
-          onArrive={markArrived}
-          onCancel={cancelVisitor}
-          t={t}
-        />
-      </section>
-
-      <section>
-        <h3 className="mb-3 text-lg font-medium text-[#1A1A1A]">{t('today.expected')}</h3>
-        <InvitationTable rows={expected} emptyMessage={t('today.noExpected')} showValidatedAt={false} t={t} />
-      </section>
-
-      <section>
-        <h3 className="mb-3 text-lg font-medium text-[#1A1A1A]">{t('today.checkedIn')}</h3>
-        <InvitationTable rows={checkedIn} emptyMessage={t('today.noCheckIns')} showValidatedAt t={t} />
-      </section>
-
-      <section>
-        <h3 className="mb-3 text-lg font-medium text-[#1A1A1A]">{t('today.usedThisMonth')}</h3>
-        <div className="rounded-2xl border border-[#ECECEC] bg-white px-5 py-5 shadow-sm">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">{t('today.validatedInvites')}</p>
-          <p className="tnum mt-2 text-3xl font-semibold tracking-tight text-[#1A1A1A]">{usedThisMonth}</p>
+        <div className="p-0">
+          {lane === 'visitors' ? (
+            <VisitorTable
+              rows={filteredVisitors}
+              mode={visitorStatus}
+              emptyMessage={
+                visitorStatus === 'expected'
+                  ? t('today.noExpectedVisitors')
+                  : t('today.noArrivedVisitors')
+              }
+              busyId={busyId}
+              onArrive={markArrived}
+              onCancel={cancelVisitor}
+              t={t}
+            />
+          ) : (
+            <InvitationTable
+              rows={filteredInvites}
+              emptyMessage={
+                inviteStatus === 'expected' ? t('today.noExpected') : t('today.noCheckIns')
+              }
+              showValidatedAt={inviteStatus === 'checked_in'}
+              t={t}
+            />
+          )}
         </div>
       </section>
+    </div>
+  )
+}
+
+function filterByQuery<T extends VisitorRow | InvitationWithChalet>(
+  rows: T[],
+  query: string,
+  kind: 'visitor' | 'invite',
+): T[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return rows
+  return rows.filter((row) => {
+    if (kind === 'visitor') {
+      const v = row as VisitorRow
+      return (
+        v.visitor_name.toLowerCase().includes(q) ||
+        (v.visitor_phone ?? '').includes(q) ||
+        (v.assets?.label ?? '').toLowerCase().includes(q)
+      )
+    }
+    const i = row as InvitationWithChalet
+    return (
+      i.invitee_name.toLowerCase().includes(q) ||
+      (i.invitee_phone ?? '').includes(q) ||
+      i.assets.label.toLowerCase().includes(q)
+    )
+  })
+}
+
+function MonthStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="min-w-[7rem]">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">{label}</p>
+      <p className="tnum mt-0.5 text-xl font-semibold tracking-tight text-[#1A1A1A]">{value}</p>
+    </div>
+  )
+}
+
+function SummaryChip({
+  label,
+  value,
+  active,
+  onClick,
+}: {
+  label: string
+  value: number
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-2xl border px-4 py-3.5 text-start transition ${
+        active
+          ? 'border-[#1A1A1A] bg-[#1A1A1A] text-white shadow-sm'
+          : 'border-[#ECECEC] bg-white text-[#1A1A1A] shadow-sm hover:border-gray-300'
+      }`}
+    >
+      <p className={`text-xs font-medium ${active ? 'text-white/70' : 'text-gray-500'}`}>{label}</p>
+      <p className="tnum mt-1 text-2xl font-semibold tracking-tight">{value}</p>
+    </button>
+  )
+}
+
+function SegmentedControl<T extends string>({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+}: {
+  value: T
+  onChange: (next: T) => void
+  options: { value: T; label: string }[]
+  ariaLabel: string
+}) {
+  return (
+    <div role="tablist" aria-label={ariaLabel} className="inline-flex rounded-xl bg-gray-100 p-1">
+      {options.map((opt) => {
+        const active = value === opt.value
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(opt.value)}
+            className={`min-h-10 rounded-lg px-4 text-sm font-semibold transition ${
+              active ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'
+            }`}
+          >
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function StatusTabs<T extends string>({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+}: {
+  value: T
+  onChange: (next: T) => void
+  options: { value: T; label: string; count: number }[]
+  ariaLabel: string
+}) {
+  return (
+    <div role="tablist" aria-label={ariaLabel} className="inline-flex flex-wrap gap-1">
+      {options.map((opt) => {
+        const active = value === opt.value
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(opt.value)}
+            className={`inline-flex min-h-9 items-center gap-2 rounded-full px-3.5 text-sm font-medium transition ${
+              active
+                ? 'bg-[#1A1A1A] text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-[#1A1A1A]'
+            }`}
+          >
+            {opt.label}
+            <span
+              className={`inline-flex min-w-5 justify-center rounded-full px-1.5 text-[11px] font-semibold ${
+                active ? 'bg-white/20 text-white' : 'bg-white text-gray-600'
+              }`}
+            >
+              {opt.count}
+            </span>
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -309,7 +487,7 @@ function VisitorTable({
   t,
 }: {
   rows: VisitorRow[]
-  mode: VisitorDeskTab
+  mode: VisitorStatus
   emptyMessage: string
   busyId: string | null
   onArrive: (id: string) => void
@@ -319,7 +497,7 @@ function VisitorTable({
   const isArrived = mode === 'arrived'
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
+    <div className="overflow-x-auto">
       <table className="min-w-full text-left text-sm">
         <thead className="bg-[#FAFAFA] text-[11px] uppercase tracking-wider text-gray-400">
           <tr>
@@ -360,7 +538,7 @@ function VisitorTable({
                       type="button"
                       disabled={busyId === row.id}
                       onClick={() => onArrive(row.id)}
-                      className="min-h-9 rounded-lg bg-[#1A1A1A] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                      className="min-h-10 rounded-lg bg-[#1A1A1A] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
                     >
                       {t('today.markArrived')}
                     </button>
@@ -368,7 +546,7 @@ function VisitorTable({
                       type="button"
                       disabled={busyId === row.id}
                       onClick={() => onCancel(row.id)}
-                      className="min-h-9 rounded-lg border border-[#ECECEC] bg-white px-3 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50"
+                      className="min-h-10 rounded-lg border border-[#ECECEC] bg-white px-3 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50"
                     >
                       {t('today.cancelVisitor')}
                     </button>
@@ -379,7 +557,7 @@ function VisitorTable({
           ))}
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-4 py-10 text-center text-gray-400">
+              <td colSpan={5} className="px-4 py-12 text-center text-gray-400">
                 {emptyMessage}
               </td>
             </tr>
@@ -402,7 +580,7 @@ function InvitationTable({
   t: (key: string) => string
 }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
+    <div className="overflow-x-auto">
       <table className="min-w-full text-left text-sm">
         <thead className="bg-[#FAFAFA] text-[11px] uppercase tracking-wider text-gray-400">
           <tr>
@@ -433,7 +611,7 @@ function InvitationTable({
             <tr>
               <td
                 colSpan={showValidatedAt ? 5 : 4}
-                className="px-4 py-10 text-center text-gray-400"
+                className="px-4 py-12 text-center text-gray-400"
               >
                 {emptyMessage}
               </td>
