@@ -29,7 +29,6 @@ type ListingForm = {
   whatsapp_phone: string
   is_featured: boolean
   is_published: boolean
-  sort_order: string
 }
 
 const emptyForm = (): ListingForm => ({
@@ -47,7 +46,6 @@ const emptyForm = (): ListingForm => ({
   whatsapp_phone: '',
   is_featured: false,
   is_published: false,
-  sort_order: '0',
 })
 
 function storagePathFromPublicUrl(url: string): string | null {
@@ -73,7 +71,6 @@ function formFromListing(item: MarketplaceListing): ListingForm {
     whatsapp_phone: item.whatsapp_phone ?? '',
     is_featured: item.is_featured,
     is_published: item.is_published,
-    sort_order: String(item.sort_order ?? 0),
   }
 }
 
@@ -297,7 +294,7 @@ export function ListingsPage() {
       whatsapp_phone: form.whatsapp_phone.trim() || null,
       is_featured: form.is_featured,
       is_published: form.is_published,
-      sort_order: parseOptionalInt(form.sort_order) ?? 0,
+      sort_order: editing?.sort_order ?? 0,
       created_by: session?.user?.id ?? null,
     }
 
@@ -622,19 +619,17 @@ export function ListingsPage() {
                 onChange={(e) => setForm((f) => ({ ...f, chalet_number: e.target.value }))}
               />
               <Input
-                label="Sort order"
-                type="number"
-                value={form.sort_order}
-                onChange={(e) => setForm((f) => ({ ...f, sort_order: e.target.value }))}
-              />
-              <Input
                 label="Call phone (E.164)"
                 value={form.call_phone}
+                placeholder="96170123456"
+                inputMode="tel"
                 onChange={(e) => setForm((f) => ({ ...f, call_phone: e.target.value }))}
               />
               <Input
                 label="WhatsApp phone (E.164)"
                 value={form.whatsapp_phone}
+                placeholder="96170123456"
+                inputMode="tel"
                 onChange={(e) => setForm((f) => ({ ...f, whatsapp_phone: e.target.value }))}
               />
             </div>

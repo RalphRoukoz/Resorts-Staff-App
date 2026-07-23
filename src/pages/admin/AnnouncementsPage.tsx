@@ -17,13 +17,18 @@ import type { Announcement, Audience } from '../../types/database'
 
 const FILES_BUCKET = 'announcement-files'
 
-type SendToPreset = 'all_guests' | 'cabine' | 'chalet_cabine'
+type SendToPreset = 'all_guests' | 'chalet' | 'cabine' | 'chalet_cabine'
 
 const SEND_TO_OPTIONS: { value: SendToPreset; label: string; hint: string }[] = [
   {
     value: 'all_guests',
     label: 'All users (including guests)',
     hint: 'Chalet + cabine owners, and visible on Explore for guests',
+  },
+  {
+    value: 'chalet',
+    label: 'Chalets only',
+    hint: 'Only chalet owners and tenants in the owner app',
   },
   {
     value: 'cabine',
@@ -39,6 +44,7 @@ const SEND_TO_OPTIONS: { value: SendToPreset; label: string; hint: string }[] = 
 
 function presetFromAnnouncement(item: Announcement): SendToPreset {
   if (item.is_public && item.audience === 'both') return 'all_guests'
+  if (item.audience === 'chalet') return 'chalet'
   if (item.audience === 'cabine') return 'cabine'
   return 'chalet_cabine'
 }
@@ -50,6 +56,7 @@ function presetLabel(item: Announcement): string {
 
 function fieldsFromPreset(preset: SendToPreset): { audience: Audience; is_public: boolean } {
   if (preset === 'all_guests') return { audience: 'both', is_public: true }
+  if (preset === 'chalet') return { audience: 'chalet', is_public: false }
   if (preset === 'cabine') return { audience: 'cabine', is_public: false }
   return { audience: 'both', is_public: false }
 }

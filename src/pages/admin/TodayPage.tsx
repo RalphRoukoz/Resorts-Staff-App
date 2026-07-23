@@ -14,8 +14,11 @@ type VisitorRow = {
   visit_date: string
   notes: string | null
   status: string
+  arrived_at: string | null
   assets: { label: string; resort_id: string } | null
 }
+
+type VisitorDeskTab = 'expected' | 'arrived'
 
 export function TodayPage() {
   const { t } = useTranslation()
@@ -28,6 +31,7 @@ export function TodayPage() {
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [visitorQuery, setVisitorQuery] = useState('')
+  const [visitorTab, setVisitorTab] = useState<VisitorDeskTab>('expected')
 
   const loadData = useCallback(async () => {
     if (!resortId) return
@@ -76,10 +80,10 @@ export function TodayPage() {
 
     const visitorsResult = await supabase
       .from('visitor_announcements')
-      .select('id, visitor_name, visitor_phone, visit_date, notes, status, assets(label, resort_id)')
+      .select('id, visitor_name, visitor_phone, visit_date, notes, status, arrived_at, assets(label, resort_id)')
       .eq('resort_id', resortId)
       .eq('visit_date', today)
-      .eq('status', 'announced')
+      .in('status', ['announced', 'arrived'])
       .order('visitor_name')
 
     if (visitorsResult.error) {
@@ -137,16 +141,31 @@ export function TodayPage() {
     void loadData()
   }, [loadData])
 
+  const expectedVisitors = useMemo(
+    () => visitors.filter((v) => v.status === 'announced'),
+    [visitors],
+  )
+  const arrivedVisitors = useMemo(() => {
+    const rows = visitors.filter((v) => v.status === 'arrived')
+    return [...rows].sort((a, b) => {
+      const at = a.arrived_at ?? ''
+      const bt = b.arrived_at ?? ''
+      return bt.localeCompare(at)
+    })
+  }, [visitors])
+
+  const deskVisitors = visitorTab === 'expected' ? expectedVisitors : arrivedVisitors
+
   const filteredVisitors = useMemo(() => {
     const q = visitorQuery.trim().toLowerCase()
-    if (!q) return visitors
-    return visitors.filter(
+    if (!q) return deskVisitors
+    return deskVisitors.filter(
       (v) =>
         v.visitor_name.toLowerCase().includes(q) ||
         (v.visitor_phone ?? '').includes(q) ||
         (v.assets?.label ?? '').toLowerCase().includes(q),
     )
-  }, [visitors, visitorQuery])
+  }, [deskVisitors, visitorQuery])
 
   async function markArrived(id: string) {
     setBusyId(id)
@@ -156,6 +175,7 @@ export function TodayPage() {
       setError(rpcError.message)
       return
     }
+    setVisitorTab('arrived')
     await loadData()
   }
 
@@ -185,7 +205,7 @@ export function TodayPage() {
       <section>
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h3 className="text-lg font-medium text-[#1A1A1A]">{t('today.expectedVisitors')}</h3>
+            <h3 className="text-lg font-medium text-[#1A1A1A]">{t('today.visitorsDesk')}</h3>
             <p className="mt-1 text-sm text-gray-500">{t('today.visitorsHint')}</p>
           </div>
           <input
@@ -196,9 +216,61 @@ export function TodayPage() {
             className="h-10 w-full max-w-xs rounded-xl border border-[#ECECEC] bg-white px-3 text-sm text-[#1A1A1A] outline-none focus:border-[#1A1A1A]/30"
           />
         </div>
+
+        <div
+          role="tablist"
+          aria-label={t('today.visitorsDesk')}
+          className="mb-3 inline-flex rounded-xl bg-gray-100 p-1"
+        >
+          {(
+            [
+              {
+                key: 'expected' as const,
+                label: t('today.expectedVisitors'),
+                count: expectedVisitors.length,
+              },
+              {
+                key: 'arrived' as const,
+                label: t('today.arrivedVisitors'),
+                count: arrivedVisitors.length,
+              },
+            ] as const
+          ).map((tab) => {
+            const active = visitorTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setVisitorTab(tab.key)}
+                className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 text-sm font-medium transition ${
+                  active
+                    ? 'bg-white text-[#1A1A1A] shadow-sm'
+                    : 'text-gray-500 hover:text-[#1A1A1A]'
+                }`}
+              >
+                {tab.label}
+                <span
+                  className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
+                    active ? 'bg-[#1A1A1A] text-white' : 'bg-gray-200 text-gray-600'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
         <VisitorTable
           rows={filteredVisitors}
-          emptyMessage={t('today.noExpectedVisitors')}
+          mode={visitorTab}
+          emptyMessage={
+            visitorTab === 'expected'
+              ? t('today.noExpectedVisitors')
+              : t('today.noArrivedVisitors')
+          }
           busyId={busyId}
           onArrive={markArrived}
           onCancel={cancelVisitor}
@@ -229,6 +301,7 @@ export function TodayPage() {
 
 function VisitorTable({
   rows,
+  mode,
   emptyMessage,
   busyId,
   onArrive,
@@ -236,12 +309,15 @@ function VisitorTable({
   t,
 }: {
   rows: VisitorRow[]
+  mode: VisitorDeskTab
   emptyMessage: string
   busyId: string | null
   onArrive: (id: string) => void
   onCancel: (id: string) => void
   t: (key: string) => string
 }) {
+  const isArrived = mode === 'arrived'
+
   return (
     <div className="overflow-x-auto rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
       <table className="min-w-full text-left text-sm">
@@ -250,8 +326,16 @@ function VisitorTable({
             <th className="px-4 py-3 font-medium">{t('today.guest')}</th>
             <th className="px-4 py-3 font-medium">{t('today.phone')}</th>
             <th className="px-4 py-3 font-medium">{t('today.unit')}</th>
-            <th className="px-4 py-3 font-medium">{t('today.notes')}</th>
-            <th className="px-4 py-3 font-medium">{t('today.actions')}</th>
+            {isArrived ? (
+              <th className="px-4 py-3 font-medium">{t('today.arrivedAt')}</th>
+            ) : (
+              <th className="px-4 py-3 font-medium">{t('today.notes')}</th>
+            )}
+            {isArrived ? (
+              <th className="px-4 py-3 font-medium">{t('today.notes')}</th>
+            ) : (
+              <th className="px-4 py-3 font-medium">{t('today.actions')}</th>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -260,27 +344,37 @@ function VisitorTable({
               <td className="px-4 py-3 font-medium text-[#1A1A1A]">{row.visitor_name}</td>
               <td className="px-4 py-3 text-gray-600">{displayPhone(row.visitor_phone)}</td>
               <td className="px-4 py-3 text-gray-600">{row.assets?.label ?? '—'}</td>
-              <td className="max-w-[14rem] truncate px-4 py-3 text-gray-600">{row.notes || '—'}</td>
-              <td className="px-4 py-3">
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled={busyId === row.id}
-                    onClick={() => onArrive(row.id)}
-                    className="rounded-lg bg-[#1A1A1A] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-                  >
-                    {t('today.markArrived')}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busyId === row.id}
-                    onClick={() => onCancel(row.id)}
-                    className="rounded-lg border border-[#ECECEC] bg-white px-3 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50"
-                  >
-                    {t('today.cancelVisitor')}
-                  </button>
-                </div>
-              </td>
+              {isArrived ? (
+                <td className="px-4 py-3 text-gray-600">
+                  {row.arrived_at ? formatDateTime(row.arrived_at) : '—'}
+                </td>
+              ) : (
+                <td className="max-w-[14rem] truncate px-4 py-3 text-gray-600">{row.notes || '—'}</td>
+              )}
+              {isArrived ? (
+                <td className="max-w-[14rem] truncate px-4 py-3 text-gray-600">{row.notes || '—'}</td>
+              ) : (
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={busyId === row.id}
+                      onClick={() => onArrive(row.id)}
+                      className="min-h-9 rounded-lg bg-[#1A1A1A] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                    >
+                      {t('today.markArrived')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === row.id}
+                      onClick={() => onCancel(row.id)}
+                      className="min-h-9 rounded-lg border border-[#ECECEC] bg-white px-3 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50"
+                    >
+                      {t('today.cancelVisitor')}
+                    </button>
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
           {rows.length === 0 ? (
