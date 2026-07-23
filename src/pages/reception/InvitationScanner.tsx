@@ -106,6 +106,8 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
     const scanner = new Html5Qrcode('qr-reader', {
       formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
       verbose: false,
+      // Prefer native BarcodeDetector when available — more reliable on screen glare.
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true },
     })
     scannerRef.current = scanner
 
@@ -113,10 +115,11 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
       await scanner.start(
         { facingMode: 'environment' },
         {
-          fps: 18,
+          fps: 24,
           qrbox: (viewfinderWidth, viewfinderHeight) => {
-            const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.72)
-            return { width: Math.max(180, edge), height: Math.max(180, edge) }
+            // Larger box helps fill the frame when scanning a phone screen up close.
+            const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.82)
+            return { width: Math.max(220, edge), height: Math.max(220, edge) }
           },
           aspectRatio: 1,
           disableFlip: false,
