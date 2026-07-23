@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -54,8 +55,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [staffRows, setStaffRows] = useState<StaffWithRole[]>([])
   const [resort, setResort] = useState<Resort | null>(null)
   const [loading, setLoading] = useState(true)
-  const [rolesLoading, setRolesLoading] = useState(false)
   const [view, setView] = useState<AppView>('admin')
+  const loadedUserIdRef = useRef<string | null>(null)
+  const rolesRequestIdRef = useRef(0)
 
   const loadResort = useCallback(async (resortId: string) => {
     const { data, error } = await supabase.from('resorts').select('*').eq('id', resortId).single()
@@ -67,9 +69,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setResort(data as Resort)
   }, [])
 
+  const clearRoles = useCallback(() => {
+    setIsSuperAdmin(false)
+    setStaffRows([])
+    setResort(null)
+    loadedUserIdRef.current = null
+  }, [])
+
   const loadUserRoles = useCallback(
     async (userId: string) => {
-      setRolesLoading(true)
+      const requestId = ++rolesRequestIdRef.current
       try {
         const { data: superAdminRow } = await supabase
           .from('super_admins')
@@ -77,10 +86,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('user_id', userId)
           .maybeSingle()
 
+        if (requestId !== rolesRequestIdRef.current) return
+
         if (superAdminRow) {
           setIsSuperAdmin(true)
           setStaffRows([])
           setResort(null)
+          loadedUserIdRef.current = userId
           return
         }
 
@@ -92,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('user_id', userId)
 
         if (error) throw error
+        if (requestId !== rolesRequestIdRef.current) return
 
         const rows = (data ?? []) as StaffWithRole[]
         setStaffRows(rows)
@@ -105,8 +118,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const resortId = rows[0]?.resort_id
         if (resortId) await loadResort(resortId)
         else setResort(null)
-      } finally {
-        setRolesLoading(false)
+
+        if (requestId === rolesRequestIdRef.current) {
+          loadedUserIdRef.current = userId
+        }
+      } catch (error) {
+        console.error('Failed to load staff roles', error)
       }
     },
     [loadResort],
@@ -131,30 +148,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (currentSession?.user.id) {
         await loadUserRoles(currentSession.user.id)
       }
-      setLoading(false)
+      if (mounted) setLoading(false)
     }
 
     void init()
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!mounted) return
+
       setSession(nextSession)
-      if (nextSession?.user.id) {
-        void loadUserRoles(nextSession.user.id)
-      } else {
-        setIsSuperAdmin(false)
-        setStaffRows([])
-        setResort(null)
-        setRolesLoading(false)
+
+      // Tab focus / background refresh must not remount the app or wipe open forms.
+      if (event === 'TOKEN_REFRESHED') return
+
+      if (!nextSession?.user.id) {
+        clearRoles()
+        return
       }
+
+      const sameUser = loadedUserIdRef.current === nextSession.user.id
+      if (sameUser && event !== 'USER_UPDATED') return
+
+      void loadUserRoles(nextSession.user.id)
     })
 
     return () => {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [loadUserRoles])
+  }, [clearRoles, loadUserRoles])
 
   const signIn = useCallback(async (username: string, password: string) => {
     const email = usernameToEmail(username)
@@ -165,10 +189,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
-    setIsSuperAdmin(false)
-    setStaffRows([])
-    setResort(null)
-  }, [])
+    clearRoles()
+  }, [clearRoles])
 
   const hasPermission = useCallback(
     (permission: Permission) => staffHasPermission(staffRows, permission),
@@ -190,7 +212,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasAccess = isSuperAdmin || staffRows.length > 0
   const resortId = staffRows[0]?.resort_id ?? null
   const staffUsername = staffRows[0]?.username?.trim() || null
-  const isLoading = loading || rolesLoading
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -200,7 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       staffUsername,
       resort,
       resortId,
-      loading: isLoading,
+      loading,
       hasAdmin,
       hasViewer,
       canWrite,
@@ -223,7 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       staffUsername,
       resort,
       resortId,
-      isLoading,
+      loading,
       hasAdmin,
       hasViewer,
       canWrite,

@@ -120,10 +120,13 @@ export function RentalsPage() {
     else await loadData()
   }
 
-  if (loading) return <Spinner label="Loading rentals…" />
+  if (loading && !modalOpen) return <Spinner label="Loading rentals…" />
 
   return (
-    <div>
+    <div className="relative">
+      {loading && modalOpen ? (
+        <div className="pointer-events-none absolute inset-0 z-10 bg-white/40" aria-hidden />
+      ) : null}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">Rentals</h2>

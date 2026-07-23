@@ -348,12 +348,18 @@ export function AnalyticsPage() {
         </div>
       </div>
 
-      {loading ? <Spinner label={t('analytics.loading')} /> : null}
-
       {error ? (
         <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       ) : null}
 
+      <div className="relative min-h-[20rem]">
+        {loading ? (
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-[2px]">
+            <Spinner label={t('analytics.loading')} />
+          </div>
+        ) : null}
+
+        <div className={loading ? 'pointer-events-none select-none opacity-40' : undefined}>
       {lane === 'invitations' ? (
         !hasInviteVisits && !loading ? (
           <EmptyCard message={t('analytics.emptyInvites')} />
@@ -534,6 +540,8 @@ export function AnalyticsPage() {
           ) : null}
         </>
       )}
+        </div>
+      </div>
     </div>
   )
 }
