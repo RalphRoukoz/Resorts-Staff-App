@@ -84,3 +84,21 @@ export function resetStaffPassword(staffUserId: string, newPassword: string): Pr
     },
   )
 }
+
+export type ResortPushPayload = {
+  resort_id: string
+  title: string
+  body?: string
+  data?: Record<string, string>
+}
+
+/** Fire-and-forget FCM fan-out for a resort (announcements / events). */
+export async function notifyResortPush(payload: ResortPushPayload): Promise<EdgeResult> {
+  return invokeEdge('notify-resort-push', payload, {
+    BAD_INPUT: 'Missing title or resort.',
+    NOT_AUTHENTICATED: 'Your session expired — please sign in again.',
+    FORBIDDEN: 'You do not have permission to send pushes for this resort.',
+    FCM_NOT_CONFIGURED: 'Push is not configured on the server yet.',
+    METHOD_NOT_ALLOWED: 'Unexpected request method.',
+  })
+}

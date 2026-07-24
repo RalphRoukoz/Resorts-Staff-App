@@ -13,6 +13,7 @@ import {
 } from '../../lib/announcementExpiry'
 import { formatDateTime } from '../../lib/dates'
 import { supabase } from '../../lib/supabase'
+import { notifyResortPush } from '../../lib/edgeFunctions'
 import type { Announcement, Audience } from '../../types/database'
 
 const FILES_BUCKET = 'announcement-files'
@@ -153,20 +154,37 @@ export function AnnouncementsPage() {
 
     const { audience, is_public } = fieldsFromPreset(sendTo)
 
-    const { error: insertError } = await supabase.from('announcements').insert({
-      resort_id: resortId,
-      title: title.trim(),
-      body: body.trim() || null,
-      audience,
-      pdf_url: pdfUrl,
-      expires_at: expiresAt,
-      is_public,
-    })
+    const { data: created, error: insertError } = await supabase
+      .from('announcements')
+      .insert({
+        resort_id: resortId,
+        title: title.trim(),
+        body: body.trim() || null,
+        audience,
+        pdf_url: pdfUrl,
+        expires_at: expiresAt,
+        is_public,
+      })
+      .select('id, title, body')
+      .single()
 
     if (insertError) {
       setFormError(insertError.message)
       setSaving(false)
       return
+    }
+
+    if (created?.id) {
+      void notifyResortPush({
+        resort_id: resortId,
+        title: created.title,
+        body: (created.body || 'New announcement').slice(0, 180),
+        data: {
+          type: 'announcement',
+          id: created.id,
+          path: `/explore/announcements/${created.id}`,
+        },
+      })
     }
 
     setModalOpen(false)

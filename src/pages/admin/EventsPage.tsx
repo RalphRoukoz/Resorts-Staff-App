@@ -7,6 +7,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
 import { PERMISSIONS } from '../../lib/permissions'
 import { formatDateTime } from '../../lib/dates'
+import { notifyResortPush } from '../../lib/edgeFunctions'
 import { supabase } from '../../lib/supabase'
 import type { ResortEvent, ResortMapPoi } from '../../types/database'
 
@@ -129,6 +130,9 @@ export function EventsPage() {
     setSaving(true)
     setFormError(null)
 
+    const previouslyPublished =
+      editingId != null ? Boolean(events.find((e) => e.id === editingId)?.is_published) : false
+
     try {
       let coverUrl = form.cover_url
       if (coverFile) {
@@ -154,12 +158,32 @@ export function EventsPage() {
         cover_url: coverUrl,
       }
 
+      let eventId = editingId
       if (editingId) {
         const { error: updateError } = await supabase.from('resort_events').update(payload).eq('id', editingId)
         if (updateError) throw updateError
       } else {
-        const { error: insertError } = await supabase.from('resort_events').insert(payload)
+        const { data: created, error: insertError } = await supabase
+          .from('resort_events')
+          .insert(payload)
+          .select('id')
+          .single()
         if (insertError) throw insertError
+        eventId = created?.id ?? null
+      }
+
+      const becamePublished = form.is_published && !previouslyPublished
+      if (becamePublished && eventId) {
+        void notifyResortPush({
+          resort_id: resortId,
+          title: form.title.trim(),
+          body: (form.description.trim() || 'New event').slice(0, 180),
+          data: {
+            type: 'event',
+            id: eventId,
+            path: `/explore/events/${eventId}`,
+          },
+        })
       }
 
       setModalOpen(false)
