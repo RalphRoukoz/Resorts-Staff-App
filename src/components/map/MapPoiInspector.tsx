@@ -11,6 +11,7 @@ export type MapPoiForm = {
   y_pct: string
   sort_order: string
   is_published: boolean
+  is_featured: boolean
   image_url: string | null
   menu_urls: string
 }
@@ -145,6 +146,26 @@ export function MapPoiInspector({
             onChange={(event) => onChange({ ...form, is_published: event.target.checked })}
           />
           Visible in guest app
+        </label>
+        <label className="flex min-h-11 items-start gap-3 rounded-xl border border-[#ECECEC] px-3 py-3 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={form.is_featured}
+            onChange={(event) =>
+              onChange({
+                ...form,
+                is_featured: event.target.checked,
+                is_published: event.target.checked ? true : form.is_published,
+              })
+            }
+          />
+          <span>
+            <span className="block font-medium text-gray-800">Featured on Explore</span>
+            <span className="mt-0.5 block text-xs text-gray-500">
+              Shows as the featured place on the guest Explore home. Only one place per resort.
+            </span>
+          </span>
         </label>
         <div>
           <span className="mb-1.5 block text-sm font-medium text-gray-700">Place photo</span>

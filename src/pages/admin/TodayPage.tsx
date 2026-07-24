@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Spinner } from '../../components/ui/Spinner'
 import { useAuth } from '../../context/AuthContext'
@@ -18,7 +18,6 @@ type VisitorRow = {
   assets: { label: string; resort_id: string } | null
 }
 
-type DeskLane = 'visitors' | 'invitations'
 type VisitorStatus = 'expected' | 'arrived'
 type InviteStatus = 'expected' | 'checked_in'
 
@@ -34,7 +33,6 @@ export function TodayPage() {
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [lane, setLane] = useState<DeskLane>('visitors')
   const [visitorStatus, setVisitorStatus] = useState<VisitorStatus>('expected')
   const [inviteStatus, setInviteStatus] = useState<InviteStatus>('expected')
 
@@ -63,7 +61,11 @@ export function TodayPage() {
     } | null
 
     if (payload?.error) {
-      setError(payload.error === 'NOT_AUTHORIZED' ? t('common.notAuthorized', { defaultValue: 'Not authorized' }) : payload.error)
+      setError(
+        payload.error === 'NOT_AUTHORIZED'
+          ? t('common.notAuthorized', { defaultValue: 'Not authorized' })
+          : payload.error,
+      )
       setLoading(false)
       return
     }
@@ -92,8 +94,14 @@ export function TodayPage() {
   const visitorRows = visitorStatus === 'expected' ? expectedVisitors : arrivedVisitors
   const inviteRows = inviteStatus === 'expected' ? expected : checkedIn
 
-  const filteredVisitors = useMemo(() => filterByQuery(visitorRows, query, 'visitor'), [visitorRows, query])
-  const filteredInvites = useMemo(() => filterByQuery(inviteRows, query, 'invite'), [inviteRows, query])
+  const filteredVisitors = useMemo(
+    () => filterByQuery(visitorRows, query, 'visitor'),
+    [visitorRows, query],
+  )
+  const filteredInvites = useMemo(
+    () => filterByQuery(inviteRows, query, 'invite'),
+    [inviteRows, query],
+  )
 
   async function markArrived(id: string) {
     setBusyId(id)
@@ -103,7 +111,6 @@ export function TodayPage() {
       setError(rpcError.message)
       return
     }
-    setLane('visitors')
     setVisitorStatus('arrived')
     await loadData()
   }
@@ -124,7 +131,7 @@ export function TodayPage() {
   const todayLabel = formatDate(todayISO())
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">{t('today.title')}</h2>
@@ -141,136 +148,81 @@ export function TodayPage() {
         <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <SummaryChip
-          label={t('today.kpiVisitorsWaiting')}
-          value={expectedVisitors.length}
-          active={lane === 'visitors' && visitorStatus === 'expected'}
-          onClick={() => {
-            setLane('visitors')
-            setVisitorStatus('expected')
-          }}
-        />
-        <SummaryChip
-          label={t('today.kpiVisitorsArrived')}
-          value={arrivedVisitors.length}
-          active={lane === 'visitors' && visitorStatus === 'arrived'}
-          onClick={() => {
-            setLane('visitors')
-            setVisitorStatus('arrived')
-          }}
-        />
-        <SummaryChip
-          label={t('today.kpiInvitesExpected')}
-          value={expected.length}
-          active={lane === 'invitations' && inviteStatus === 'expected'}
-          onClick={() => {
-            setLane('invitations')
-            setInviteStatus('expected')
-          }}
-        />
-        <SummaryChip
-          label={t('today.kpiInvitesCheckedIn')}
-          value={checkedIn.length}
-          active={lane === 'invitations' && inviteStatus === 'checked_in'}
-          onClick={() => {
-            setLane('invitations')
-            setInviteStatus('checked_in')
-          }}
+      <div className="relative">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('today.searchBoth')}
+          className="h-11 w-full rounded-xl border border-[#ECECEC] bg-white px-3 text-[16px] text-[#1A1A1A] shadow-sm outline-none focus:border-[#1A1A1A]/30"
         />
       </div>
 
-      <section className="overflow-hidden rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-[#ECECEC] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <SegmentedControl
-            ariaLabel={t('today.laneLabel')}
-            value={lane}
-            onChange={(next) => {
-              setLane(next)
-              setQuery('')
-            }}
-            options={[
-              { value: 'visitors', label: t('today.laneVisitors') },
-              { value: 'invitations', label: t('today.laneInvitations') },
-            ]}
-          />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={
-              lane === 'visitors' ? t('today.searchVisitors') : t('today.searchInvitations')
+      <div className="grid gap-5 xl:grid-cols-2">
+        <DeskPanel
+          title={t('today.laneVisitors')}
+          accent="visitors"
+          statusAriaLabel={t('today.visitorStatusLabel')}
+          statusValue={visitorStatus}
+          onStatusChange={setVisitorStatus}
+          statusOptions={[
+            {
+              value: 'expected' as const,
+              label: t('today.expectedVisitors'),
+              count: expectedVisitors.length,
+            },
+            {
+              value: 'arrived' as const,
+              label: t('today.arrivedVisitors'),
+              count: arrivedVisitors.length,
+            },
+          ]}
+          hint={t('today.visitorsHint')}
+        >
+          <VisitorTable
+            rows={filteredVisitors}
+            mode={visitorStatus}
+            emptyMessage={
+              visitorStatus === 'expected'
+                ? t('today.noExpectedVisitors')
+                : t('today.noArrivedVisitors')
             }
-            className="h-11 w-full max-w-sm rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-3 text-[16px] text-[#1A1A1A] outline-none focus:border-[#1A1A1A]/30 focus:bg-white"
+            busyId={busyId}
+            onArrive={markArrived}
+            onCancel={cancelVisitor}
+            t={t}
           />
-        </div>
+        </DeskPanel>
 
-        <div className="border-b border-[#ECECEC] px-4 py-3">
-          {lane === 'visitors' ? (
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <StatusTabs
-                ariaLabel={t('today.visitorStatusLabel')}
-                value={visitorStatus}
-                onChange={setVisitorStatus}
-                options={[
-                  {
-                    value: 'expected',
-                    label: t('today.expectedVisitors'),
-                    count: expectedVisitors.length,
-                  },
-                  {
-                    value: 'arrived',
-                    label: t('today.arrivedVisitors'),
-                    count: arrivedVisitors.length,
-                  },
-                ]}
-              />
-              <p className="text-xs text-gray-500">{t('today.visitorsHint')}</p>
-            </div>
-          ) : (
-            <StatusTabs
-              ariaLabel={t('today.inviteStatusLabel')}
-              value={inviteStatus}
-              onChange={setInviteStatus}
-              options={[
-                { value: 'expected', label: t('today.inviteExpected'), count: expected.length },
-                {
-                  value: 'checked_in',
-                  label: t('today.inviteCheckedIn'),
-                  count: checkedIn.length,
-                },
-              ]}
-            />
-          )}
-        </div>
-
-        <div className="p-0">
-          {lane === 'visitors' ? (
-            <VisitorTable
-              rows={filteredVisitors}
-              mode={visitorStatus}
-              emptyMessage={
-                visitorStatus === 'expected'
-                  ? t('today.noExpectedVisitors')
-                  : t('today.noArrivedVisitors')
-              }
-              busyId={busyId}
-              onArrive={markArrived}
-              onCancel={cancelVisitor}
-              t={t}
-            />
-          ) : (
-            <InvitationTable
-              rows={filteredInvites}
-              emptyMessage={
-                inviteStatus === 'expected' ? t('today.noExpected') : t('today.noCheckIns')
-              }
-              showValidatedAt={inviteStatus === 'checked_in'}
-              t={t}
-            />
-          )}
-        </div>
-      </section>
+        <DeskPanel
+          title={t('today.laneInvitations')}
+          accent="invitations"
+          statusAriaLabel={t('today.inviteStatusLabel')}
+          statusValue={inviteStatus}
+          onStatusChange={setInviteStatus}
+          statusOptions={[
+            {
+              value: 'expected' as const,
+              label: t('today.inviteExpected'),
+              count: expected.length,
+            },
+            {
+              value: 'checked_in' as const,
+              label: t('today.inviteCheckedIn'),
+              count: checkedIn.length,
+            },
+          ]}
+        >
+          <InvitationTable
+            rows={filteredInvites}
+            emptyMessage={
+              inviteStatus === 'expected' ? t('today.noExpected') : t('today.noCheckIns')
+            }
+            showValidatedAt={inviteStatus === 'checked_in'}
+            t={t}
+          />
+        </DeskPanel>
+      </div>
     </div>
   )
 }
@@ -309,64 +261,45 @@ function MonthStat({ label, value }: { label: string; value: number }) {
   )
 }
 
-function SummaryChip({
-  label,
-  value,
-  active,
-  onClick,
+function DeskPanel<T extends string>({
+  title,
+  accent,
+  statusAriaLabel,
+  statusValue,
+  onStatusChange,
+  statusOptions,
+  hint,
+  children,
 }: {
-  label: string
-  value: number
-  active: boolean
-  onClick: () => void
+  title: string
+  accent: 'visitors' | 'invitations'
+  statusAriaLabel: string
+  statusValue: T
+  onStatusChange: (next: T) => void
+  statusOptions: { value: T; label: string; count: number }[]
+  hint?: string
+  children: ReactNode
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-2xl border px-4 py-3.5 text-start transition ${
-        active
-          ? 'border-[#1A1A1A] bg-[#1A1A1A] text-white shadow-sm'
-          : 'border-[#ECECEC] bg-white text-[#1A1A1A] shadow-sm hover:border-gray-300'
-      }`}
-    >
-      <p className={`text-xs font-medium ${active ? 'text-white/70' : 'text-gray-500'}`}>{label}</p>
-      <p className="tnum mt-1 text-2xl font-semibold tracking-tight">{value}</p>
-    </button>
-  )
-}
+  const bar =
+    accent === 'visitors' ? 'bg-[var(--accent)]' : 'bg-[#1A1A1A]'
 
-function SegmentedControl<T extends string>({
-  value,
-  onChange,
-  options,
-  ariaLabel,
-}: {
-  value: T
-  onChange: (next: T) => void
-  options: { value: T; label: string }[]
-  ariaLabel: string
-}) {
   return (
-    <div role="tablist" aria-label={ariaLabel} className="inline-flex rounded-xl bg-gray-100 p-1">
-      {options.map((opt) => {
-        const active = value === opt.value
-        return (
-          <button
-            key={opt.value}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(opt.value)}
-            className={`min-h-10 rounded-lg px-4 text-sm font-semibold transition ${
-              active ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'
-            }`}
-          >
-            {opt.label}
-          </button>
-        )
-      })}
-    </div>
+    <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[#ECECEC] bg-white shadow-sm">
+      <div className={`h-1 w-full ${bar}`} aria-hidden />
+      <div className="space-y-3 border-b border-[#ECECEC] px-4 py-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 className="text-lg font-semibold tracking-tight text-[#1A1A1A]">{title}</h3>
+          {hint ? <p className="hidden text-xs text-gray-400 sm:block">{hint}</p> : null}
+        </div>
+        <StatusTabs
+          ariaLabel={statusAriaLabel}
+          value={statusValue}
+          onChange={onStatusChange}
+          options={statusOptions}
+        />
+      </div>
+      <div className="min-h-[20rem] flex-1">{children}</div>
+    </section>
   )
 }
 
@@ -382,7 +315,11 @@ function StatusTabs<T extends string>({
   ariaLabel: string
 }) {
   return (
-    <div role="tablist" aria-label={ariaLabel} className="inline-flex flex-wrap gap-1">
+    <div
+      role="tablist"
+      aria-label={ariaLabel}
+      className="inline-flex w-full rounded-xl bg-gray-100 p-1 sm:w-auto"
+    >
       {options.map((opt) => {
         const active = value === opt.value
         return (
@@ -392,16 +329,16 @@ function StatusTabs<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(opt.value)}
-            className={`inline-flex min-h-9 items-center gap-2 rounded-full px-3.5 text-sm font-medium transition ${
+            className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition sm:flex-none sm:px-4 ${
               active
-                ? 'bg-[#1A1A1A] text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-[#1A1A1A]'
+                ? 'bg-white text-[#1A1A1A] shadow-sm'
+                : 'text-gray-500 hover:text-[#1A1A1A]'
             }`}
           >
             {opt.label}
             <span
-              className={`inline-flex min-w-5 justify-center rounded-full px-1.5 text-[11px] font-semibold ${
-                active ? 'bg-white/20 text-white' : 'bg-white text-gray-600'
+              className={`tnum inline-flex min-w-5 justify-center rounded-full px-1.5 text-[11px] font-semibold ${
+                active ? 'bg-gray-100 text-[#1A1A1A]' : 'bg-white/80 text-gray-500'
               }`}
             >
               {opt.count}
@@ -438,15 +375,9 @@ function VisitorTable({
         <thead className="bg-[#FAFAFA] text-[11px] uppercase tracking-wider text-gray-400">
           <tr>
             <th className="px-4 py-3 font-medium">{t('today.guest')}</th>
-            <th className="px-4 py-3 font-medium">{t('today.phone')}</th>
             <th className="px-4 py-3 font-medium">{t('today.unit')}</th>
             {isArrived ? (
               <th className="px-4 py-3 font-medium">{t('today.arrivedAt')}</th>
-            ) : (
-              <th className="px-4 py-3 font-medium">{t('today.notes')}</th>
-            )}
-            {isArrived ? (
-              <th className="px-4 py-3 font-medium">{t('today.notes')}</th>
             ) : (
               <th className="px-4 py-3 font-medium">{t('today.actions')}</th>
             )}
@@ -455,18 +386,18 @@ function VisitorTable({
         <tbody className="divide-y divide-gray-100">
           {rows.map((row) => (
             <tr key={row.id} className="transition hover:bg-gray-50">
-              <td className="px-4 py-3 font-medium text-[#1A1A1A]">{row.visitor_name}</td>
-              <td className="px-4 py-3 text-gray-600">{displayPhone(row.visitor_phone)}</td>
+              <td className="px-4 py-3">
+                <p className="font-medium text-[#1A1A1A]">{row.visitor_name}</p>
+                <p className="mt-0.5 text-xs text-gray-500">{displayPhone(row.visitor_phone)}</p>
+                {row.notes ? (
+                  <p className="mt-1 max-w-[16rem] truncate text-xs text-gray-400">{row.notes}</p>
+                ) : null}
+              </td>
               <td className="px-4 py-3 text-gray-600">{row.assets?.label ?? '—'}</td>
               {isArrived ? (
                 <td className="px-4 py-3 text-gray-600">
                   {row.arrived_at ? formatDateTime(row.arrived_at) : '—'}
                 </td>
-              ) : (
-                <td className="max-w-[14rem] truncate px-4 py-3 text-gray-600">{row.notes || '—'}</td>
-              )}
-              {isArrived ? (
-                <td className="max-w-[14rem] truncate px-4 py-3 text-gray-600">{row.notes || '—'}</td>
               ) : (
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-2">
@@ -493,7 +424,7 @@ function VisitorTable({
           ))}
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-4 py-12 text-center text-gray-400">
+              <td colSpan={3} className="px-4 py-14 text-center text-gray-400">
                 {emptyMessage}
               </td>
             </tr>
@@ -521,34 +452,32 @@ function InvitationTable({
         <thead className="bg-[#FAFAFA] text-[11px] uppercase tracking-wider text-gray-400">
           <tr>
             <th className="px-4 py-3 font-medium">{t('today.guest')}</th>
-            <th className="px-4 py-3 font-medium">{t('today.phone')}</th>
             <th className="px-4 py-3 font-medium">{t('today.unit')}</th>
-            <th className="px-4 py-3 font-medium">{t('today.visitDate')}</th>
-            {showValidatedAt ? (
-              <th className="px-4 py-3 font-medium">{t('today.validatedAt')}</th>
-            ) : null}
+            <th className="px-4 py-3 font-medium">
+              {showValidatedAt ? t('today.validatedAt') : t('today.visitDate')}
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {rows.map((row) => (
             <tr key={row.id} className="transition hover:bg-gray-50">
-              <td className="px-4 py-3 font-medium text-[#1A1A1A]">{row.invitee_name}</td>
-              <td className="px-4 py-3 text-gray-600">{displayPhone(row.invitee_phone)}</td>
+              <td className="px-4 py-3">
+                <p className="font-medium text-[#1A1A1A]">{row.invitee_name}</p>
+                <p className="mt-0.5 text-xs text-gray-500">{displayPhone(row.invitee_phone)}</p>
+              </td>
               <td className="px-4 py-3 text-gray-600">{row.assets.label}</td>
-              <td className="px-4 py-3 text-gray-600">{formatDate(row.visit_date)}</td>
-              {showValidatedAt ? (
-                <td className="px-4 py-3 text-gray-600">
-                  {row.validated_at ? formatDateTime(row.validated_at) : '—'}
-                </td>
-              ) : null}
+              <td className="px-4 py-3 text-gray-600">
+                {showValidatedAt
+                  ? row.validated_at
+                    ? formatDateTime(row.validated_at)
+                    : '—'
+                  : formatDate(row.visit_date)}
+              </td>
             </tr>
           ))}
           {rows.length === 0 ? (
             <tr>
-              <td
-                colSpan={showValidatedAt ? 5 : 4}
-                className="px-4 py-12 text-center text-gray-400"
-              >
+              <td colSpan={3} className="px-4 py-14 text-center text-gray-400">
                 {emptyMessage}
               </td>
             </tr>

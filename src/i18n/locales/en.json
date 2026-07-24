@@ -249,6 +249,7 @@
     "visitorsHint": "Not on list? Call the owner.",
     "searchVisitors": "Search visitors…",
     "searchInvitations": "Search invitations…",
+    "searchBoth": "Search guests, phones, or units…",
     "noExpectedVisitors": "No announced visitors for today.",
     "noArrivedVisitors": "No arrivals recorded yet today.",
     "markArrived": "Mark arrived",

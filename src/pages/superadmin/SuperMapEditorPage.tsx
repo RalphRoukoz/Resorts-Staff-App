@@ -26,6 +26,7 @@ type PoiForm = {
   y_pct: string
   sort_order: string
   is_published: boolean
+  is_featured: boolean
   image_url: string | null
   menu_urls: string
 }
@@ -38,6 +39,7 @@ const emptyPoiForm = (type: PoiType = 'restaurant'): PoiForm => ({
   y_pct: '50',
   sort_order: '0',
   is_published: true,
+  is_featured: false,
   image_url: null,
   menu_urls: '',
 })
@@ -219,7 +221,7 @@ export function SuperMapEditorPage() {
         const { data: sourcePois, error: poisErr } = await supabase
           .from('resort_map_pois')
           .select(
-            'poi_type, title, description, hours_note, x_pct, y_pct, sort_order, is_published, image_url, menu_urls, hours_json',
+            'poi_type, title, description, hours_note, x_pct, y_pct, sort_order, is_published, is_featured, image_url, menu_urls, hours_json',
           )
           .eq('resort_id', copySourceId)
           .order('sort_order')
@@ -240,6 +242,7 @@ export function SuperMapEditorPage() {
           y_pct: poi.y_pct,
           sort_order: poi.sort_order,
           is_published: poi.is_published,
+          is_featured: poi.is_featured ?? false,
           image_url: poi.image_url,
           menu_urls: poi.menu_urls ?? [],
           hours_json: poi.hours_json ?? null,
@@ -318,6 +321,7 @@ export function SuperMapEditorPage() {
       y_pct: String(poi.y_pct),
       sort_order: String(poi.sort_order),
       is_published: poi.is_published,
+      is_featured: poi.is_featured ?? false,
       image_url: poi.image_url,
       menu_urls: (poi.menu_urls ?? []).join('\n'),
     })
@@ -388,6 +392,7 @@ export function SuperMapEditorPage() {
         if (validationError) throw new Error(validationError)
         imageUrl = await uploadGuestFile(poiImageFile, 'pois')
       }
+      const featured = poiForm.is_featured
       const payload = {
         resort_id: resortId,
         poi_type: poiForm.poi_type,
@@ -397,10 +402,24 @@ export function SuperMapEditorPage() {
         x_pct: x,
         y_pct: y,
         sort_order: Number(poiForm.sort_order) || 0,
-        is_published: poiForm.is_published,
+        is_published: featured ? true : poiForm.is_published,
+        is_featured: featured,
         image_url: imageUrl,
         menu_urls: poiForm.menu_urls.split('\n').map((value) => value.trim()).filter(Boolean),
       }
+
+      if (featured) {
+        const clearQuery = editingPoiId
+          ? supabase
+              .from('resort_map_pois')
+              .update({ is_featured: false })
+              .eq('resort_id', resortId)
+              .neq('id', editingPoiId)
+          : supabase.from('resort_map_pois').update({ is_featured: false }).eq('resort_id', resortId)
+        const { error: clearError } = await clearQuery
+        if (clearError) throw clearError
+      }
+
       const query = editingPoiId
         ? supabase.from('resort_map_pois').update(payload).eq('id', editingPoiId)
         : supabase.from('resort_map_pois').insert(payload)
@@ -678,7 +697,11 @@ export function SuperMapEditorPage() {
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-medium text-[#1A1A1A]">{poi.title}</span>
-                        <span className="block text-xs text-gray-500">{POI_META[poi.poi_type]}{!poi.is_published ? ' · Draft' : ''}</span>
+                        <span className="block text-xs text-gray-500">
+                          {POI_META[poi.poi_type]}
+                          {poi.is_featured ? ' · Featured' : ''}
+                          {!poi.is_published ? ' · Draft' : ''}
+                        </span>
                       </span>
                     </button>
                   )

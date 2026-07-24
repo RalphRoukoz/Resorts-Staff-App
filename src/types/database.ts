@@ -183,6 +183,7 @@ export interface ResortMapPoi {
   menu_urls: string[]
   sort_order: number
   is_published: boolean
+  is_featured: boolean
   created_at: string
   updated_at: string
 }
