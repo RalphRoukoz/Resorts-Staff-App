@@ -73,7 +73,11 @@
     "receptionRequired": "مطلوب مسح الاستقبال أولاً",
     "paymentRequired": "الدفع مطلوب عند الاستقبال",
     "validatedAt": "تم التحقق: {{date}}",
-    "validFor": "صالحة لـ: {{date}}"
+    "validFor": "صالحة لـ: {{date}}",
+    "checkpointReception": "الاستقبال",
+    "checkpointGate": "البوابة",
+    "scannedAtLabel": "تم المسح مسبقاً",
+    "scannedAtCheckpoint": "تم المسح في {{checkpoint}}"
   },
   "units": {
     "title": "الشاليهات والكبائن",
@@ -263,6 +267,9 @@
     "disabledHint": "الفعاليات معطّلة لهذا المنتجع.",
     "fieldTitle": "العنوان",
     "fieldDescription": "الوصف",
+    "fieldNotificationDescription": "وصف الإشعار",
+    "fieldNotificationDescriptionPlaceholder": "نص قصير تحت العنوان في إشعار الدفع",
+    "fieldNotificationDescriptionHint": "يُستخدم عند نشر الفعالية. يظهر تحت العنوان في شاشة القفل. حد أقصى 180 حرفًا.",
     "fieldStarts": "البداية",
     "fieldEnds": "النهاية (اختياري)",
     "fieldLocation": "موقع",

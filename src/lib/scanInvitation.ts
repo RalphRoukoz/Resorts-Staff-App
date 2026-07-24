@@ -41,6 +41,7 @@ export async function scanInvitation(
     ok: false,
     reason: String(row.reason ?? 'UNKNOWN'),
     validated_at: row.validated_at ? String(row.validated_at) : undefined,
+    checkpoint: row.checkpoint ? (row.checkpoint as ScanCheckpoint) : undefined,
     invitee: row.invitee ? String(row.invitee) : undefined,
     chalet: row.chalet ? String(row.chalet) : undefined,
     valid_for: row.valid_for ? String(row.valid_for) : undefined,

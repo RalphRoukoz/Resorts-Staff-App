@@ -73,7 +73,11 @@
     "receptionRequired": "Scan réception requis d'abord",
     "paymentRequired": "Paiement requis à la réception",
     "validatedAt": "Validée : {{date}}",
-    "validFor": "Valable pour : {{date}}"
+    "validFor": "Valable pour : {{date}}",
+    "checkpointReception": "Réception",
+    "checkpointGate": "Portail",
+    "scannedAtLabel": "Déjà scannée",
+    "scannedAtCheckpoint": "Scannée à {{checkpoint}}"
   },
   "units": {
     "title": "Chalets et cabines",
@@ -265,6 +269,9 @@
     "disabledHint": "Les événements sont désactivés pour ce resort.",
     "fieldTitle": "Titre",
     "fieldDescription": "Description",
+    "fieldNotificationDescription": "Description de la notification",
+    "fieldNotificationDescriptionPlaceholder": "Texte court sous le titre dans la notification push",
+    "fieldNotificationDescriptionHint": "Utilisé lors de la publication. Affiché sous le titre sur l’écran de verrouillage. Max 180 caractères.",
     "fieldStarts": "Début",
     "fieldEnds": "Fin (optionnel)",
     "fieldLocation": "Lieu",

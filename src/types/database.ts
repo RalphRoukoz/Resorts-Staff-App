@@ -265,6 +265,8 @@ export interface ValidateFailure {
   ok: false
   reason: string
   validated_at?: string
+  /** Checkpoint that consumed the code (reception or gate), when known. */
+  checkpoint?: ScanCheckpoint
   invitee?: string
   chalet?: string
   valid_for?: string

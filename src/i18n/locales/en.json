@@ -73,7 +73,11 @@
     "receptionRequired": "Reception scan required first",
     "paymentRequired": "Payment required at reception",
     "validatedAt": "Validated: {{date}}",
-    "validFor": "Valid for: {{date}}"
+    "validFor": "Valid for: {{date}}",
+    "checkpointReception": "Reception",
+    "checkpointGate": "Gate",
+    "scannedAtLabel": "Already scanned",
+    "scannedAtCheckpoint": "Scanned at {{checkpoint}}"
   },
   "units": {
     "title": "Chalets & Cabines",
@@ -300,6 +304,9 @@
     "disabledHint": "Events are disabled for this resort. Ask a platform admin to enable Events in Super Admin → Resorts.",
     "fieldTitle": "Title",
     "fieldDescription": "Description",
+    "fieldNotificationDescription": "Notification description",
+    "fieldNotificationDescriptionPlaceholder": "Short text under the title in the push notification",
+    "fieldNotificationDescriptionHint": "Used when the event is published. Shown under the title on the lock screen. Max 180 characters.",
     "fieldStarts": "Starts",
     "fieldEnds": "Ends (optional)",
     "fieldLocation": "Location label",

@@ -72,6 +72,7 @@ export function AnnouncementsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [notificationDescription, setNotificationDescription] = useState('')
   const [sendTo, setSendTo] = useState<SendToPreset>('chalet_cabine')
   const [expiryPreset, setExpiryPreset] = useState<AnnouncementExpiryPreset>('never')
   const [customExpiresAt, setCustomExpiresAt] = useState('')
@@ -104,6 +105,7 @@ export function AnnouncementsPage() {
   function openCreate() {
     setTitle('')
     setBody('')
+    setNotificationDescription('')
     setSendTo('chalet_cabine')
     setExpiryPreset('never')
     setCustomExpiresAt('')
@@ -175,10 +177,12 @@ export function AnnouncementsPage() {
     }
 
     if (created?.id && resortId) {
+      const pushBody =
+        notificationDescription.trim() || created.body || 'New announcement'
       const push = await notifyResortPush({
         resort_id: resortId,
         title: created.title,
-        body: (created.body || 'New announcement').slice(0, 180),
+        body: pushBody.slice(0, 180),
         data: {
           type: 'announcement',
           id: created.id,
@@ -306,6 +310,22 @@ export function AnnouncementsPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-gray-700">
+                Notification description
+              </span>
+              <textarea
+                rows={2}
+                maxLength={180}
+                value={notificationDescription}
+                onChange={(e) => setNotificationDescription(e.target.value)}
+                placeholder="Short text under the title in the push notification"
+                className="w-full rounded-xl border border-[#ECECEC] bg-white px-3.5 py-2.5 text-[#1A1A1A] placeholder:text-gray-400 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
+              />
+              <p className="mt-1.5 text-xs text-gray-500">
+                Shown under the title on the lock screen / notification tray. Max 180 characters.
+              </p>
+            </label>
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium text-gray-700">Body (optional)</span>
               <textarea

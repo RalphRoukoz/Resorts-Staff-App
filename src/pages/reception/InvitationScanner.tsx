@@ -260,6 +260,37 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
   )
 }
 
+/** Shows when and at which checkpoint a code was already consumed. */
+function ScanDetails({
+  result,
+  t,
+}: {
+  result: Extract<ValidateResult, { ok: false }>
+  t: (key: string, opts?: Record<string, unknown>) => string
+}) {
+  if (!result.validated_at && !result.checkpoint) return null
+
+  const checkpointLabel =
+    result.checkpoint === 'gate'
+      ? t('scanner.checkpointGate')
+      : result.checkpoint === 'reception'
+        ? t('scanner.checkpointReception')
+        : null
+
+  return (
+    <div className="mx-auto w-full max-w-xs rounded-2xl bg-black/10 px-4 py-3">
+      <p className="text-xs font-semibold uppercase tracking-wide opacity-75">
+        {checkpointLabel
+          ? t('scanner.scannedAtCheckpoint', { checkpoint: checkpointLabel })
+          : t('scanner.scannedAtLabel')}
+      </p>
+      {result.validated_at ? (
+        <p className="mt-1 text-lg font-semibold">{formatDateTime(result.validated_at)}</p>
+      ) : null}
+    </div>
+  )
+}
+
 function FailureMessage({
   result,
   t,
@@ -272,7 +303,7 @@ function FailureMessage({
       return (
         <>
           <p className="text-2xl font-semibold">{t('scanner.alreadyUsed')}</p>
-          {result.validated_at ? <p>{t('scanner.validatedAt', { date: formatDateTime(result.validated_at) })}</p> : null}
+          <ScanDetails result={result} t={t} />
           {result.invitee ? <p>{result.invitee}</p> : null}
           {result.chalet ? <p>{result.chalet}</p> : null}
         </>
@@ -292,7 +323,14 @@ function FailureMessage({
     case 'CANCELLED':
       return <p className="text-2xl font-semibold">{t('scanner.cancelled')}</p>
     case 'ALREADY_SCANNED_RECEPTION':
-      return <p className="text-2xl font-semibold">{t('scanner.alreadyScannedReception')}</p>
+      return (
+        <>
+          <p className="text-2xl font-semibold">{t('scanner.alreadyScannedReception')}</p>
+          <ScanDetails result={result} t={t} />
+          {result.invitee ? <p>{result.invitee}</p> : null}
+          {result.chalet ? <p>{result.chalet}</p> : null}
+        </>
+      )
     case 'NOT_AUTHORIZED':
       return <p className="text-2xl font-semibold">{t('scanner.notAuthorized')}</p>
     case 'RECEPTION_REQUIRED_FIRST':

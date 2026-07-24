@@ -16,6 +16,7 @@ const GUEST_BUCKET = 'resort-guest'
 type EventForm = {
   title: string
   description: string
+  notification_description: string
   starts_at: string
   ends_at: string
   location_label: string
@@ -27,6 +28,7 @@ type EventForm = {
 const emptyForm = (): EventForm => ({
   title: '',
   description: '',
+  notification_description: '',
   starts_at: '',
   ends_at: '',
   location_label: '',
@@ -108,6 +110,7 @@ export function EventsPage() {
     setForm({
       title: item.title,
       description: item.description ?? '',
+      notification_description: '',
       starts_at: toLocalInput(item.starts_at),
       ends_at: toLocalInput(item.ends_at),
       location_label: item.location_label ?? '',
@@ -174,10 +177,12 @@ export function EventsPage() {
 
       const becamePublished = form.is_published && !previouslyPublished
       if (becamePublished && eventId && resortId) {
+        const pushBody =
+          form.notification_description.trim() || form.description.trim() || 'New event'
         const push = await notifyResortPush({
           resort_id: resortId,
           title: form.title.trim(),
-          body: (form.description.trim() || 'New event').slice(0, 180),
+          body: pushBody.slice(0, 180),
           data: {
             type: 'event',
             id: eventId,
@@ -291,6 +296,20 @@ export function EventsPage() {
         >
           <div className="space-y-4">
             <Input label={t('events.fieldTitle')} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-gray-700">
+                {t('events.fieldNotificationDescription')}
+              </span>
+              <textarea
+                rows={2}
+                maxLength={180}
+                value={form.notification_description}
+                onChange={(e) => setForm({ ...form, notification_description: e.target.value })}
+                placeholder={t('events.fieldNotificationDescriptionPlaceholder')}
+                className="w-full rounded-xl border border-[#ECECEC] px-3.5 py-2.5"
+              />
+              <p className="mt-1.5 text-xs text-gray-500">{t('events.fieldNotificationDescriptionHint')}</p>
+            </label>
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium text-gray-700">{t('events.fieldDescription')}</span>
               <textarea
