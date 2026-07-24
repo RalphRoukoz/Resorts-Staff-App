@@ -30,7 +30,7 @@ export default defineConfig({
       },
       workbox: {
         // Bump when schema/payload contracts change so installed PWAs drop stale JS.
-        cacheId: 'resorts-staff-v2-owner-phones',
+        cacheId: 'resorts-staff-v3-push-notify',
         cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
       },

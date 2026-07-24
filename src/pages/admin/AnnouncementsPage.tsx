@@ -174,8 +174,8 @@ export function AnnouncementsPage() {
       return
     }
 
-    if (created?.id) {
-      void notifyResortPush({
+    if (created?.id && resortId) {
+      const push = await notifyResortPush({
         resort_id: resortId,
         title: created.title,
         body: (created.body || 'New announcement').slice(0, 180),
@@ -185,6 +185,11 @@ export function AnnouncementsPage() {
           path: `/explore/announcements/${created.id}`,
         },
       })
+      if (!push.ok) {
+        setError(`Announcement saved, but push failed: ${push.message}`)
+      } else if (push.sent === 0) {
+        setError('Announcement saved. No devices registered for push yet — open the guest app and allow notifications.')
+      }
     }
 
     setModalOpen(false)

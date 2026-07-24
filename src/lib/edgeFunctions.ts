@@ -92,13 +92,42 @@ export type ResortPushPayload = {
   data?: Record<string, string>
 }
 
-/** Fire-and-forget FCM fan-out for a resort (announcements / events). */
-export async function notifyResortPush(payload: ResortPushPayload): Promise<EdgeResult> {
-  return invokeEdge('notify-resort-push', payload, {
-    BAD_INPUT: 'Missing title or resort.',
-    NOT_AUTHENTICATED: 'Your session expired — please sign in again.',
-    FORBIDDEN: 'You do not have permission to send pushes for this resort.',
-    FCM_NOT_CONFIGURED: 'Push is not configured on the server yet.',
-    METHOD_NOT_ALLOWED: 'Unexpected request method.',
-  })
+export type ResortPushResult =
+  | { ok: true; sent: number; stale: number }
+  | { ok: false; message: string }
+
+/** FCM fan-out for a resort (announcements / events). */
+export async function notifyResortPush(payload: ResortPushPayload): Promise<ResortPushResult> {
+  const { data, error } = await supabase.functions.invoke('notify-resort-push', { body: payload })
+
+  if (error) {
+    let bodyError: string | undefined
+    try {
+      const ctx = (error as { context?: Response }).context
+      if (ctx?.json) {
+        const parsed = (await ctx.json()) as { error?: string }
+        bodyError = parsed.error
+      }
+    } catch {
+      // ignore parse failure
+    }
+    const messages: Record<string, string> = {
+      BAD_INPUT: 'Missing title or resort.',
+      NOT_AUTHENTICATED: 'Your session expired — please sign in again.',
+      FORBIDDEN: 'You do not have permission to send pushes for this resort.',
+      FCM_NOT_CONFIGURED: 'Push is not configured on the server yet.',
+      METHOD_NOT_ALLOWED: 'Unexpected request method.',
+    }
+    const code = bodyError ?? ''
+    return { ok: false, message: messages[code] ?? bodyError ?? error.message }
+  }
+
+  if (data && typeof data === 'object' && 'error' in data) {
+    const code = String((data as { error: string }).error)
+    return { ok: false, message: code }
+  }
+
+  const sent = Number((data as { sent?: number } | null)?.sent ?? 0)
+  const stale = Number((data as { stale?: number } | null)?.stale ?? 0)
+  return { ok: true, sent, stale }
 }

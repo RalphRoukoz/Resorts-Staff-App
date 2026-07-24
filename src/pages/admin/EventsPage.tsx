@@ -173,8 +173,8 @@ export function EventsPage() {
       }
 
       const becamePublished = form.is_published && !previouslyPublished
-      if (becamePublished && eventId) {
-        void notifyResortPush({
+      if (becamePublished && eventId && resortId) {
+        const push = await notifyResortPush({
           resort_id: resortId,
           title: form.title.trim(),
           body: (form.description.trim() || 'New event').slice(0, 180),
@@ -184,6 +184,11 @@ export function EventsPage() {
             path: `/explore/events/${eventId}`,
           },
         })
+        if (!push.ok) {
+          setError(`Event saved, but push failed: ${push.message}`)
+        } else if (push.sent === 0) {
+          setError('Event saved. No devices registered for push yet — open the guest app and allow notifications.')
+        }
       }
 
       setModalOpen(false)

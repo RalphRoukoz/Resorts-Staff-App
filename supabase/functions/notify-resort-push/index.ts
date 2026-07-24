@@ -3,6 +3,8 @@ import * as jose from 'https://deno.land/x/jose@v5.9.6/index.ts'
 
 const ALLOWED_ORIGINS = new Set([
   'https://resortly.roukify.com',
+  'https://resortly-dashboard.roukify.com',
+  'https://resorts-staff-app-ralphroukozs-projects.vercel.app',
   'capacitor://localhost',
   'https://localhost',
   'http://localhost',
@@ -29,7 +31,10 @@ function isAllowedOrigin(origin: string): boolean {
   try {
     const url = new URL(origin)
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
-    return url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return true
+    if (url.hostname.endsWith('.roukify.com')) return true
+    if (url.hostname.endsWith('.vercel.app')) return true
+    return false
   } catch {
     return false
   }
@@ -199,10 +204,9 @@ Deno.serve(async (req) => {
     if (!canSend) {
       const { data: staffRow, error: staffError } = await admin
         .from('resort_staff')
-        .select('role')
+        .select('id')
         .eq('user_id', user.id)
         .eq('resort_id', resortId)
-        .in('role', ['admin', 'reception'])
         .maybeSingle()
 
       if (staffError) {
