@@ -225,7 +225,7 @@
     "events.write": "Manage events",
     "listings.write": "Manage marketplace listings",
     "staff.manage": "Manage staff accounts",
-    "config.write": "Edit resort configuration",
+    "config.write": "Edit resort configuration (deprecated)",
     "scanner": "Use scanner (reception & gate)",
     "scanner.reception": "Reception scanner",
     "scanner.gate": "Gate scanner",

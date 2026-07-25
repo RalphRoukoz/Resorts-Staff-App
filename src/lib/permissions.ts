@@ -6,6 +6,7 @@ export const PERMISSIONS = {
   INVITATIONS_BONUS: 'invitations.bonus',
   ANNOUNCEMENTS_WRITE: 'announcements.write',
   STAFF_MANAGE: 'staff.manage',
+  /** @deprecated Resort config is super-admin only — not assignable in role editors. */
   CONFIG_WRITE: 'config.write',
   /** @deprecated Prefer SCANNER_RECEPTION / SCANNER_GATE */
   SCANNER: 'scanner',
@@ -20,14 +21,13 @@ export const PERMISSIONS = {
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
 
-/** Permissions shown in role editors (legacy combined scanner omitted). */
+/** Permissions shown in role editors (deprecated entries omitted). */
 export const ALL_PERMISSIONS: Permission[] = [
   PERMISSIONS.DASHBOARD_READ,
   PERMISSIONS.DASHBOARD_WRITE,
   PERMISSIONS.INVITATIONS_BONUS,
   PERMISSIONS.ANNOUNCEMENTS_WRITE,
   PERMISSIONS.STAFF_MANAGE,
-  PERMISSIONS.CONFIG_WRITE,
   PERMISSIONS.SCANNER_RECEPTION,
   PERMISSIONS.SCANNER_GATE,
   PERMISSIONS.UNITS_WRITE,
@@ -43,7 +43,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'invitations.bonus': 'Grant or remove bonus invitations',
   'announcements.write': 'Manage announcements',
   'staff.manage': 'Manage staff accounts',
-  'config.write': 'Edit resort configuration',
+  'config.write': 'Edit resort configuration (deprecated — super admin only)',
   scanner: 'Use scanner (reception & gate)',
   'scanner.reception': 'Reception scanner',
   'scanner.gate': 'Gate scanner',
@@ -60,7 +60,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'invitations.bonus': 'Grant or remove extra weekday/weekend invitations for a unit for the current period.',
   'announcements.write': 'Create, edit, and delete resort announcements.',
   'staff.manage': 'Add staff accounts, assign roles, and reset passwords.',
-  'config.write': 'Change resort invite limits, season dates, and scanner settings.',
+  'config.write': 'Deprecated. Invite limits and season settings are configured by platform super admins.',
   scanner: 'Scan invitation QR codes at reception and gate checkpoints.',
   'scanner.reception': 'Scan invitation QR codes at the reception checkpoint.',
   'scanner.gate': 'Scan invitation QR codes at the gate checkpoint.',
@@ -87,6 +87,7 @@ function expandPermissions(perms: Iterable<string>): Set<Permission> {
 
 export function permissionsForStaff(row: StaffWithRole): Set<Permission> {
   const role = row.resort_roles
+  // Owner/admin no longer receive CONFIG_WRITE (super-admin-only settings).
   if (role?.is_owner) return new Set(ALL_PERMISSIONS)
   if (role?.permissions?.length) return expandPermissions(role.permissions)
 

@@ -6,7 +6,7 @@ import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { DAY_LABELS } from '../../lib/dates'
 import { supabase } from '../../lib/supabase'
-import type { ResortWithStats } from '../../types/database'
+import type { PeriodAllowanceMode, ResortWithStats } from '../../types/database'
 
 const DEFAULT_ACCENT = '#1A1A1A'
 const LOGO_BUCKET = 'resort-logos'
@@ -18,9 +18,12 @@ interface ResortForm {
   cabine_weekday_limit: string
   cabine_weekend_limit: string
   cabine_invites_enabled: boolean
+  cabine_limit_invites: boolean
   cabine_paid_invites: boolean
   chalet_double_scan: boolean
-  invitation_period_mode: 'monthly' | 'whole_period'
+  invitation_period_start: string
+  invitation_period_end: string
+  period_allowance_mode: PeriodAllowanceMode
   weekend_days: number[]
   primary_color: string
   logo_url: string | null
@@ -38,9 +41,12 @@ const emptyForm: ResortForm = {
   cabine_weekday_limit: '8',
   cabine_weekend_limit: '3',
   cabine_invites_enabled: true,
+  cabine_limit_invites: true,
   cabine_paid_invites: false,
   chalet_double_scan: false,
-  invitation_period_mode: 'monthly',
+  invitation_period_start: '',
+  invitation_period_end: '',
+  period_allowance_mode: 'monthly_within_period',
   weekend_days: [5, 6],
   primary_color: DEFAULT_ACCENT,
   logo_url: null,
@@ -131,9 +137,12 @@ export function SuperResortsPage() {
       cabine_weekday_limit: String(resort.cabine_weekday_limit),
       cabine_weekend_limit: String(resort.cabine_weekend_limit),
       cabine_invites_enabled: resort.cabine_invites_enabled,
+      cabine_limit_invites: resort.cabine_limit_invites ?? true,
       cabine_paid_invites: resort.cabine_paid_invites ?? false,
       chalet_double_scan: resort.chalet_double_scan ?? false,
-      invitation_period_mode: resort.invitation_period_mode ?? 'monthly',
+      invitation_period_start: resort.invitation_period_start ?? '',
+      invitation_period_end: resort.invitation_period_end ?? '',
+      period_allowance_mode: resort.period_allowance_mode ?? 'monthly_within_period',
       weekend_days: [...resort.weekend_days],
       primary_color: resort.primary_color || DEFAULT_ACCENT,
       logo_url: resort.logo_url,
@@ -152,6 +161,14 @@ export function SuperResortsPage() {
   async function handleSave() {
     if (!form.name.trim()) {
       setFormError('Name is required')
+      return
+    }
+    if (!form.invitation_period_start || !form.invitation_period_end) {
+      setFormError('Season start and end dates are required')
+      return
+    }
+    if (form.invitation_period_end < form.invitation_period_start) {
+      setFormError('Season end must be on or after season start')
       return
     }
 
@@ -180,14 +197,18 @@ export function SuperResortsPage() {
 
     const payload = {
       name: form.name.trim(),
-      chalet_weekday_limit: Number(form.chalet_weekday_limit),
-      chalet_weekend_limit: Number(form.chalet_weekend_limit),
-      cabine_weekday_limit: Number(form.cabine_weekday_limit),
-      cabine_weekend_limit: Number(form.cabine_weekend_limit),
+      chalet_weekday_limit: Number(form.chalet_weekday_limit) || 0,
+      chalet_weekend_limit: Number(form.chalet_weekend_limit) || 0,
+      cabine_weekday_limit: Number(form.cabine_weekday_limit) || 0,
+      cabine_weekend_limit: Number(form.cabine_weekend_limit) || 0,
       cabine_invites_enabled: form.cabine_invites_enabled,
+      cabine_limit_invites: form.cabine_limit_invites,
       cabine_paid_invites: form.cabine_paid_invites,
       chalet_double_scan: form.chalet_double_scan,
-      invitation_period_mode: form.invitation_period_mode,
+      invitation_period_mode: 'whole_period' as const,
+      invitation_period_start: form.invitation_period_start,
+      invitation_period_end: form.invitation_period_end,
+      period_allowance_mode: form.period_allowance_mode,
       weekend_days: form.weekend_days,
       primary_color: form.primary_color,
       logo_url: nextLogoUrl,
@@ -246,7 +267,9 @@ export function SuperResortsPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">Resorts</h2>
-          <p className="mt-1 text-sm text-gray-500">All resorts on the platform.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Platform resorts — invite limits, season dates, branding, and guest features.
+          </p>
         </div>
         <Button onClick={openCreate}>Add resort</Button>
       </div>
@@ -403,6 +426,65 @@ export function SuperResortsPage() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
+
+            <div className="space-y-4 rounded-2xl border border-[#ECECEC] bg-[#FAFAFA] p-4">
+              <p className="text-sm font-semibold text-[#1A1A1A]">Invitation season</p>
+              <p className="text-sm text-gray-500">
+                Owners and tenants can only issue invitations inside this date range.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Season start"
+                  type="date"
+                  value={form.invitation_period_start}
+                  onChange={(e) => setForm({ ...form, invitation_period_start: e.target.value })}
+                />
+                <Input
+                  label="Season end"
+                  type="date"
+                  value={form.invitation_period_end}
+                  onChange={(e) => setForm({ ...form, invitation_period_end: e.target.value })}
+                />
+              </div>
+              <div>
+                <p className="mb-2 text-sm font-medium text-gray-700">Allowance period</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-white px-4 py-3">
+                    <input
+                      type="radio"
+                      name="periodAllowance"
+                      className="mt-0.5"
+                      checked={form.period_allowance_mode === 'monthly_within_period'}
+                      onChange={() =>
+                        setForm({ ...form, period_allowance_mode: 'monthly_within_period' })
+                      }
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-[#1A1A1A]">Monthly within season</span>
+                      <span className="mt-0.5 block text-sm text-gray-500">
+                        Weekday/weekend limits reset each calendar month inside the season.
+                      </span>
+                    </span>
+                  </label>
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-white px-4 py-3">
+                    <input
+                      type="radio"
+                      name="periodAllowance"
+                      className="mt-0.5"
+                      checked={form.period_allowance_mode === 'entire_period'}
+                      onChange={() => setForm({ ...form, period_allowance_mode: 'entire_period' })}
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-[#1A1A1A]">Entire season</span>
+                      <span className="mt-0.5 block text-sm text-gray-500">
+                        One allowance pool for the whole season date range.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-4 py-3">
               <input
                 type="checkbox"
@@ -422,8 +504,25 @@ export function SuperResortsPage() {
               <input
                 type="checkbox"
                 className="mt-1 h-4 w-4 rounded border-gray-300"
+                checked={form.cabine_limit_invites}
+                onChange={(e) => setForm({ ...form, cabine_limit_invites: e.target.checked })}
+                disabled={!form.cabine_invites_enabled}
+              />
+              <span>
+                <span className="block text-sm font-medium text-[#1A1A1A]">Limit cabine invitations</span>
+                <span className="mt-0.5 block text-sm text-gray-500">
+                  When off, cabines can invite without weekday/weekend caps.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-4 py-3">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-gray-300"
                 checked={form.cabine_paid_invites}
                 onChange={(e) => setForm({ ...form, cabine_paid_invites: e.target.checked })}
+                disabled={!form.cabine_invites_enabled}
               />
               <span>
                 <span className="block text-sm font-medium text-[#1A1A1A]">Cabine paid invitations</span>
@@ -463,22 +562,28 @@ export function SuperResortsPage() {
                 value={form.chalet_weekend_limit}
                 onChange={(e) => setForm({ ...form, chalet_weekend_limit: e.target.value })}
               />
-              <Input
-                label="Cabine weekday limit"
-                type="number"
-                min={0}
-                value={form.cabine_weekday_limit}
-                onChange={(e) => setForm({ ...form, cabine_weekday_limit: e.target.value })}
-                disabled={!form.cabine_invites_enabled}
-              />
-              <Input
-                label="Cabine weekend limit"
-                type="number"
-                min={0}
-                value={form.cabine_weekend_limit}
-                onChange={(e) => setForm({ ...form, cabine_weekend_limit: e.target.value })}
-                disabled={!form.cabine_invites_enabled}
-              />
+              {form.cabine_invites_enabled && form.cabine_limit_invites ? (
+                <>
+                  <Input
+                    label="Cabine weekday limit"
+                    type="number"
+                    min={0}
+                    value={form.cabine_weekday_limit}
+                    onChange={(e) => setForm({ ...form, cabine_weekday_limit: e.target.value })}
+                  />
+                  <Input
+                    label="Cabine weekend limit"
+                    type="number"
+                    min={0}
+                    value={form.cabine_weekend_limit}
+                    onChange={(e) => setForm({ ...form, cabine_weekend_limit: e.target.value })}
+                  />
+                </>
+              ) : form.cabine_invites_enabled ? (
+                <p className="col-span-2 text-sm text-gray-500">
+                  Cabine invitations are enabled without weekday/weekend caps.
+                </p>
+              ) : null}
             </div>
 
             <fieldset>

@@ -23,7 +23,6 @@ const eventsNavItem = { to: '/admin/events', labelKey: 'nav.events' } as const
 
 const writeNavItems = [
   { to: '/admin/staff', labelKey: 'nav.staff', permission: PERMISSIONS.STAFF_MANAGE },
-  { to: '/admin/configuration', labelKey: 'nav.configuration', permission: PERMISSIONS.CONFIG_WRITE },
 ] as const
 
 export function AdminLayout() {
