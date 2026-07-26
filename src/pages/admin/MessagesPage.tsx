@@ -6,6 +6,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { UnitSearchSelect } from '../../components/UnitSearchSelect'
 import { useAuth } from '../../context/AuthContext'
 import { formatDateTime } from '../../lib/dates'
+import { notifyResortPush } from '../../lib/edgeFunctions'
 import { PERMISSIONS } from '../../lib/permissions'
 import { supabase } from '../../lib/supabase'
 
@@ -39,6 +40,7 @@ export function MessagesPage() {
   const [selectedUnits, setSelectedUnits] = useState<SelectedUnit[]>([])
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [statusNote, setStatusNote] = useState<string | null>(null)
 
   const loadMessages = useCallback(async () => {
     if (!resortId) return
@@ -110,6 +112,27 @@ export function MessagesPage() {
       return
     }
 
+    const push = await notifyResortPush({
+      resort_id: resortId,
+      title: title.trim(),
+      body: body.trim().slice(0, 180),
+      asset_ids: selectedUnits.map((unit) => unit.id),
+      data: {
+        type: 'unit_message',
+        path: '/messages',
+      },
+    })
+
+    if (!push.ok) {
+      setStatusNote(`Message saved, but push failed: ${push.message}`)
+    } else if (push.sent === 0) {
+      setStatusNote(
+        'Message saved. No matching owner/tenant devices registered for push yet — they will still see it in the guest app inbox.',
+      )
+    } else {
+      setStatusNote(`Message saved and pushed to ${push.sent} device${push.sent === 1 ? '' : 's'}.`)
+    }
+
     setModalOpen(false)
     setSaving(false)
     await loadMessages()
@@ -131,6 +154,9 @@ export function MessagesPage() {
 
       {error ? (
         <p className="mb-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+      ) : null}
+      {statusNote ? (
+        <p className="mb-4 rounded-xl border border-[#ECECEC] bg-white px-3 py-2 text-sm text-gray-600">{statusNote}</p>
       ) : null}
 
       <div className="space-y-3">

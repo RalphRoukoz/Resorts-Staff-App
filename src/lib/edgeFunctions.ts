@@ -90,6 +90,8 @@ export type ResortPushPayload = {
   title: string
   body?: string
   data?: Record<string, string>
+  /** When set, only owners/current tenants of these assets receive the push. */
+  asset_ids?: string[]
 }
 
 export type ResortPushResult =
