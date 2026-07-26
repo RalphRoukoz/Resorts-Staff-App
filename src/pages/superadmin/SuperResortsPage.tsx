@@ -527,7 +527,7 @@ export function SuperResortsPage() {
               <span>
                 <span className="block text-sm font-medium text-[#1A1A1A]">Cabine paid invitations</span>
                 <span className="mt-0.5 block text-sm text-gray-500">
-                  Cabines always scan at reception then gate. When enabled, reception confirms payment before gate entry.
+                  Cabines check in once at reception only. When enabled, reception marks payment paid on that scan; guests use the paper bill at the gate.
                 </span>
               </span>
             </label>

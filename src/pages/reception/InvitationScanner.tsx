@@ -20,7 +20,12 @@ interface InvitationScannerProps {
 
 function resultBackground(result: ValidateResult): string {
   if (!result.ok) {
-    if (result.reason === 'RECEPTION_REQUIRED_FIRST') return 'bg-orange-500'
+    if (
+      result.reason === 'RECEPTION_REQUIRED_FIRST' ||
+      result.reason === 'CABINE_RECEPTION_ONLY'
+    ) {
+      return 'bg-orange-500'
+    }
     return 'bg-rose-700'
   }
   // Dual-scan first checkpoint (reception) → yellow; final validation → green
@@ -185,10 +190,14 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
           ) : (
             <>
               <div className="mb-6 text-7xl">
-                {result.reason === 'RECEPTION_REQUIRED_FIRST' ? '!' : '✕'}
+                {result.reason === 'RECEPTION_REQUIRED_FIRST' ||
+                result.reason === 'CABINE_RECEPTION_ONLY'
+                  ? '!'
+                  : '✕'}
               </div>
               <h1 className="text-3xl font-bold">
-                {result.reason === 'RECEPTION_REQUIRED_FIRST'
+                {result.reason === 'RECEPTION_REQUIRED_FIRST' ||
+                result.reason === 'CABINE_RECEPTION_ONLY'
                   ? t('scanner.outOfOrder')
                   : t('scanner.invalid')}
               </h1>
@@ -337,6 +346,15 @@ function FailureMessage({
       return (
         <>
           <p className="text-2xl font-semibold">{t('scanner.receptionRequired')}</p>
+          {result.invitee ? <p>{result.invitee}</p> : null}
+          {result.chalet ? <p>{result.chalet}</p> : null}
+        </>
+      )
+    case 'CABINE_RECEPTION_ONLY':
+      return (
+        <>
+          <p className="text-2xl font-semibold">{t('scanner.cabineReceptionOnly')}</p>
+          <p className="text-lg opacity-90">{t('scanner.cabineReceptionOnlyHint')}</p>
           {result.invitee ? <p>{result.invitee}</p> : null}
           {result.chalet ? <p>{result.chalet}</p> : null}
         </>

@@ -6,6 +6,7 @@ import { PERMISSIONS, type Permission } from './lib/permissions'
 import { AdminLayout } from './pages/admin/AdminLayout'
 import { AnalyticsPage } from './pages/admin/AnalyticsPage'
 import { AnnouncementsPage } from './pages/admin/AnnouncementsPage'
+import { MessagesPage } from './pages/admin/MessagesPage'
 import { ListingsPage } from './pages/admin/ListingsPage'
 import { StaffPage } from './pages/admin/StaffPage'
 import { RentalsPage } from './pages/admin/RentalsPage'
@@ -170,6 +171,9 @@ export default function App() {
           <Route path="today" element={<TodayPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
+          <Route element={<RequirePermission permission={PERMISSIONS.ANNOUNCEMENTS_WRITE} />}>
+            <Route path="messages" element={<MessagesPage />} />
+          </Route>
           <Route element={<RequireEventsEnabled />}>
             <Route element={<RequireEventsWrite />}>
               <Route path="events" element={<EventsPage />} />
