@@ -127,7 +127,7 @@ export function MessagesPage() {
       setStatusNote(`Message saved, but push failed: ${push.message}`)
     } else if (push.sent === 0) {
       setStatusNote(
-        'Message saved. No matching owner/tenant devices registered for push yet — they will still see it in the guest app inbox.',
+        'Message saved. No matching recipient devices registered for push yet — they will still see it in the guest app inbox.',
       )
     } else {
       setStatusNote(`Message saved and pushed to ${push.sent} device${push.sent === 1 ? '' : 's'}.`)
@@ -146,7 +146,7 @@ export function MessagesPage() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">Messages</h2>
           <p className="mt-1 text-sm text-gray-500">
-            One-way notes to specific chalets or cabines. Owners and tenants see these in the guest app only.
+            One-way notes to specific chalets or cabines. Delivered to the current tenant while rented, otherwise to the owner(s). Guests see these in the app only.
           </p>
         </div>
         {canWrite ? <Button onClick={openCreate}>New message</Button> : null}
