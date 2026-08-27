@@ -5,6 +5,7 @@ import { useAuth } from './context/AuthContext'
 import { PERMISSIONS, type Permission } from './lib/permissions'
 import { AdminLayout } from './pages/admin/AdminLayout'
 import { AnalyticsPage } from './pages/admin/AnalyticsPage'
+import { GuestPatternsPage } from './pages/admin/GuestPatternsPage'
 import { AnnouncementsPage } from './pages/admin/AnnouncementsPage'
 import { MessagesPage } from './pages/admin/MessagesPage'
 import { ListingsPage } from './pages/admin/ListingsPage'
@@ -170,6 +171,7 @@ export default function App() {
           <Route path="rentals" element={<RentalsPage />} />
           <Route path="today" element={<TodayPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="guest-patterns" element={<GuestPatternsPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route element={<RequirePermission permission={PERMISSIONS.ANNOUNCEMENTS_WRITE} />}>
             <Route path="messages" element={<MessagesPage />} />

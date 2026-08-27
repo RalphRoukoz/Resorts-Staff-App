@@ -32,6 +32,10 @@ interface ResortForm {
   events_enabled: boolean
   gallery_enabled: boolean
   info_enabled: boolean
+  daily_invitation_cap: string
+  max_advance_days: string
+  distinct_guests_flag_chalet: string
+  distinct_guests_flag_cabine: string
 }
 
 const emptyForm: ResortForm = {
@@ -55,6 +59,10 @@ const emptyForm: ResortForm = {
   events_enabled: false,
   gallery_enabled: false,
   info_enabled: false,
+  daily_invitation_cap: '',
+  max_advance_days: '',
+  distinct_guests_flag_chalet: '20',
+  distinct_guests_flag_cabine: '8',
 }
 
 function toggleDay(days: number[], day: number): number[] {
@@ -151,6 +159,11 @@ export function SuperResortsPage() {
       events_enabled: resort.events_enabled ?? false,
       gallery_enabled: resort.gallery_enabled ?? false,
       info_enabled: resort.info_enabled ?? false,
+      daily_invitation_cap:
+        resort.daily_invitation_cap != null ? String(resort.daily_invitation_cap) : '',
+      max_advance_days: resort.max_advance_days != null ? String(resort.max_advance_days) : '',
+      distinct_guests_flag_chalet: String(resort.distinct_guests_flag_chalet ?? 20),
+      distinct_guests_flag_cabine: String(resort.distinct_guests_flag_cabine ?? 8),
     })
     setLogoFile(null)
     setFormError(null)
@@ -169,6 +182,14 @@ export function SuperResortsPage() {
     }
     if (form.invitation_period_end < form.invitation_period_start) {
       setFormError('Season end must be on or after season start')
+      return
+    }
+    if (form.daily_invitation_cap.trim() && Number(form.daily_invitation_cap) <= 0) {
+      setFormError('Daily invitation cap must be a positive number, or leave blank for unlimited')
+      return
+    }
+    if (form.max_advance_days.trim() && Number(form.max_advance_days) < 0) {
+      setFormError('Max advance days cannot be negative, or leave blank for unlimited')
       return
     }
 
@@ -217,6 +238,12 @@ export function SuperResortsPage() {
       events_enabled: form.events_enabled,
       gallery_enabled: form.gallery_enabled,
       info_enabled: form.info_enabled,
+      daily_invitation_cap: form.daily_invitation_cap.trim()
+        ? Number(form.daily_invitation_cap)
+        : null,
+      max_advance_days: form.max_advance_days.trim() ? Number(form.max_advance_days) : null,
+      distinct_guests_flag_chalet: Number(form.distinct_guests_flag_chalet) || 20,
+      distinct_guests_flag_cabine: Number(form.distinct_guests_flag_cabine) || 8,
     }
 
     if (editingId) {
@@ -483,6 +510,48 @@ export function SuperResortsPage() {
                   </label>
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-4 rounded-2xl border border-[#ECECEC] bg-[#FAFAFA] p-4">
+              <p className="text-sm font-semibold text-[#1A1A1A]">Anti-resale limits</p>
+              <p className="text-sm text-gray-500">
+                Leave blank for unlimited. These apply resort-wide and do not change unit allowances.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Daily invitation cap"
+                  type="number"
+                  min={1}
+                  value={form.daily_invitation_cap}
+                  onChange={(e) => setForm({ ...form, daily_invitation_cap: e.target.value })}
+                  placeholder="e.g. 200"
+                />
+                <Input
+                  label="Max advance days"
+                  type="number"
+                  min={0}
+                  value={form.max_advance_days}
+                  onChange={(e) => setForm({ ...form, max_advance_days: e.target.value })}
+                  placeholder="e.g. 7"
+                />
+                <Input
+                  label="Guest Patterns flag — chalet"
+                  type="number"
+                  min={1}
+                  value={form.distinct_guests_flag_chalet}
+                  onChange={(e) => setForm({ ...form, distinct_guests_flag_chalet: e.target.value })}
+                />
+                <Input
+                  label="Guest Patterns flag — cabine"
+                  type="number"
+                  min={1}
+                  value={form.distinct_guests_flag_cabine}
+                  onChange={(e) => setForm({ ...form, distinct_guests_flag_cabine: e.target.value })}
+                />
+              </div>
+              <p className="text-sm text-gray-500">
+                Flag thresholds only highlight units on the Guest Patterns page; they never block issuing.
+              </p>
             </div>
 
             <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-4 py-3">

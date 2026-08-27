@@ -23,12 +23,14 @@ type InviteStatus = 'expected' | 'checked_in'
 
 export function TodayPage() {
   const { t } = useTranslation()
-  const { resortId } = useAuth()
+  const { resortId, resort } = useAuth()
   const [expected, setExpected] = useState<InvitationWithChalet[]>([])
   const [checkedIn, setCheckedIn] = useState<InvitationWithChalet[]>([])
   const [visitors, setVisitors] = useState<VisitorRow[]>([])
   const [usedThisMonth, setUsedThisMonth] = useState(0)
   const [visitorsArrivedMonth, setVisitorsArrivedMonth] = useState(0)
+  const [dayUsed, setDayUsed] = useState<number | null>(null)
+  const [dayCap, setDayCap] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -41,17 +43,21 @@ export function TodayPage() {
     setLoading(true)
     setError(null)
 
-    const { data: deskData, error: deskError } = await supabase.rpc('resort_today_desk', {
-      p_resort_id: resortId,
-    })
+    const [deskResult, capacityResult] = await Promise.all([
+      supabase.rpc('resort_today_desk', { p_resort_id: resortId }),
+      supabase.rpc('resort_date_capacity', {
+        p_resort: resortId,
+        p_date: todayISO(),
+      }),
+    ])
 
-    if (deskError) {
-      setError(deskError.message)
+    if (deskResult.error) {
+      setError(deskResult.error.message)
       setLoading(false)
       return
     }
 
-    const payload = deskData as {
+    const payload = deskResult.data as {
       error?: string
       expected_invitations?: InvitationWithChalet[]
       checked_in_invitations?: InvitationWithChalet[]
@@ -75,8 +81,22 @@ export function TodayPage() {
     setVisitors((payload?.visitors ?? []) as VisitorRow[])
     setUsedThisMonth(payload?.invitations_validated_month ?? 0)
     setVisitorsArrivedMonth(payload?.visitors_arrived_month ?? 0)
+
+    const capPayload = capacityResult.data as {
+      error?: string
+      used?: number
+      cap?: number | null
+    } | null
+    if (!capacityResult.error && capPayload && !capPayload.error) {
+      setDayUsed(Number(capPayload.used ?? 0))
+      setDayCap(capPayload.cap == null ? null : Number(capPayload.cap))
+    } else {
+      setDayUsed(null)
+      setDayCap(resort?.daily_invitation_cap ?? null)
+    }
+
     setLoading(false)
-  }, [resortId, t])
+  }, [resortId, resort?.daily_invitation_cap, t])
 
   useEffect(() => {
     void loadData()
@@ -138,6 +158,21 @@ export function TodayPage() {
           <p className="mt-1 text-sm text-gray-500">{t('today.subtitle', { date: todayLabel })}</p>
         </div>
         <div className="flex flex-wrap gap-2 rounded-2xl border border-[#ECECEC] bg-white px-4 py-3 shadow-sm">
+          {dayUsed != null ? (
+            <>
+              <MonthStat
+                label={t('today.dayCapacity')}
+                value={
+                  dayCap == null
+                    ? `${dayUsed}`
+                    : dayUsed >= dayCap
+                      ? `${dayUsed}/${dayCap} ${t('today.dayCapacityFull')}`
+                      : `${dayUsed}/${dayCap}`
+                }
+              />
+              <div className="mx-1 hidden h-8 w-px bg-[#ECECEC] sm:block" aria-hidden />
+            </>
+          ) : null}
           <MonthStat label={t('today.monthInvites')} value={usedThisMonth} />
           <div className="mx-1 hidden h-8 w-px bg-[#ECECEC] sm:block" aria-hidden />
           <MonthStat label={t('today.monthVisitors')} value={visitorsArrivedMonth} />
@@ -252,7 +287,7 @@ function filterByQuery<T extends VisitorRow | InvitationWithChalet>(
   })
 }
 
-function MonthStat({ label, value }: { label: string; value: number }) {
+function MonthStat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="min-w-[7rem]">
       <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">{label}</p>

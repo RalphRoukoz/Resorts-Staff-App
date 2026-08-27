@@ -14,6 +14,7 @@ const readNavItems = [
   { to: '/admin/rentals', labelKey: 'nav.rentals' },
   { to: '/admin/today', labelKey: 'nav.today' },
   { to: '/admin/analytics', labelKey: 'nav.analytics' },
+  { to: '/admin/guest-patterns', labelKey: 'nav.guestPatterns' },
   { to: '/admin/announcements', labelKey: 'nav.announcements' },
 ] as const
 

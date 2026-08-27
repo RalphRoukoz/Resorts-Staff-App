@@ -54,6 +54,12 @@ export interface Resort {
   public_whatsapp?: string | null
   arrival_notes?: string | null
   gate_notes?: string | null
+  /** Max guest invitations per visit_date resort-wide. null = unlimited. */
+  daily_invitation_cap?: number | null
+  /** Max days ahead invitations may be issued. null = unlimited. */
+  max_advance_days?: number | null
+  distinct_guests_flag_chalet?: number
+  distinct_guests_flag_cabine?: number
   created_at: string
 }
 
@@ -67,8 +73,10 @@ export interface Asset {
   asset_type: AssetType
   weekday_limit: number | null
   weekend_limit: number | null
-  /** When false (default), only one owner-app device may stay signed in per owner phone. */
+  /** @deprecated Single-device lock is global per phone; column ignored. */
   allow_multiple_logins: boolean
+  /** When set and on/after today, unit cannot issue invitations. */
+  invites_suspended_until?: string | null
   created_at: string
 }
 
