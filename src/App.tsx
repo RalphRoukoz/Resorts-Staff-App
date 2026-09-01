@@ -13,6 +13,7 @@ import { StaffPage } from './pages/admin/StaffPage'
 import { RentalsPage } from './pages/admin/RentalsPage'
 import { TodayPage } from './pages/admin/TodayPage'
 import { UnitsPage } from './pages/admin/UnitsPage'
+import { ResortConfigPage } from './pages/admin/ResortConfigPage'
 import { LoginPage } from './pages/LoginPage'
 import { NoAccessPage } from './pages/NoAccessPage'
 import { ReceptionScanner } from './pages/reception/ReceptionScanner'
@@ -184,7 +185,9 @@ export default function App() {
           <Route element={<RequireMarketplace />}>
             <Route path="listings" element={<ListingsPage />} />
           </Route>
-          <Route path="configuration" element={<Navigate to="/admin/units" replace />} />
+          <Route element={<RequirePermission permission={PERMISSIONS.DASHBOARD_WRITE} />}>
+            <Route path="configuration" element={<ResortConfigPage />} />
+          </Route>
           <Route element={<RequirePermission permission={PERMISSIONS.STAFF_MANAGE} />}>
             <Route path="staff" element={<StaffPage />} />
           </Route>

@@ -138,7 +138,24 @@
     "seasonDatesRequired": "Les dates de début et fin de saison sont requises.",
     "seasonEndBeforeStart": "La fin de saison doit être après le début.",
     "saved": "Configuration enregistrée.",
-    "loading": "Chargement de la configuration…"
+    "loading": "Chargement de la configuration…",
+    "subtitleAdmin": "Limites chalet par défaut et règles anti-revente pour {{name}}.",
+    "tabInviteDefaults": "Quotas par défaut",
+    "tabResaleLimits": "Limites revente",
+    "chaletDefaultsHint": "Les nouveaux chalets utilisent ces limites chaque mois. Utilisez Unités pour des bonus ponctuels.",
+    "resaleTitle": "Limites anti-revente",
+    "resaleHint": "Laisser vide pour illimité. S'applique à tout le resort.",
+    "dailyInvitationCap": "Cap quotidien d'invitations",
+    "maxAdvanceDays": "Jours d'anticipation max",
+    "flagChalet": "Seuil Guest Patterns — chalet",
+    "flagCabine": "Seuil Guest Patterns — cabine",
+    "flagThresholdHint": "Les seuils ne bloquent pas les invitations, ils signalent sur Guest Patterns.",
+    "unlimitedPlaceholder": "Illimité",
+    "invalidChaletLimits": "Les limites chalet doivent être ≥ 0.",
+    "invalidDailyCap": "Le cap quotidien doit être > 0 ou vide pour illimité.",
+    "invalidAdvanceDays": "Les jours d'anticipation doivent être ≥ 0 ou vide.",
+    "invalidFlagThreshold": "Les seuils doivent être > 0.",
+    "notAuthorized": "Pas la permission de modifier la configuration."
   },
   "analytics": {
     "title": "Analytique",
@@ -207,6 +224,12 @@
   },
   "demo": {
     "banner": "Mode démo — données fictives"
+  },
+  "unitMessages": {
+    "removeFromDashboard": "Retirer du tableau",
+    "removeConfirm": "Retirer ce message du tableau staff ? Les invités le verront encore dans l'app.",
+    "removing": "Suppression…",
+    "removeFailed": "Impossible de retirer le message."
   },
   "guestPatterns": {
     "title": "Motifs invités",

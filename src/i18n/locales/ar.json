@@ -136,7 +136,24 @@
     "seasonDatesRequired": "تواريخ الموسم مطلوبة.",
     "seasonEndBeforeStart": "يجب أن تكون النهاية بعد البداية.",
     "saved": "تم حفظ الإعدادات.",
-    "loading": "جاري تحميل الإعدادات…"
+    "loading": "جاري تحميل الإعدادات…",
+    "subtitleAdmin": "حدود الشاليه الافتراضية وقواعد مكافحة إعادة البيع لـ {{name}}.",
+    "tabInviteDefaults": "الحصص الافتراضية",
+    "tabResaleLimits": "حدود إعادة البيع",
+    "chaletDefaultsHint": "الشاليهات الجديدة تستخدم هذه الحدود كل شهر.",
+    "resaleTitle": "حدود مكافحة إعادة البيع",
+    "resaleHint": "اترك فارغاً لعدم التحديد. تطبق على المنتجع كاملاً.",
+    "dailyInvitationCap": "الحد اليومي للدعوات",
+    "maxAdvanceDays": "أقصى أيام مسبقة",
+    "flagChalet": "عتبة Guest Patterns — شاليه",
+    "flagCabine": "عتبة Guest Patterns — كبينة",
+    "flagThresholdHint": "العتبات للتنبيه فقط ولا تمنع الإصدار.",
+    "unlimitedPlaceholder": "غير محدود",
+    "invalidChaletLimits": "حدود الشاليه يجب أن تكون ≥ 0.",
+    "invalidDailyCap": "الحد اليومي يجب أن يكون > 0 أو فارغ.",
+    "invalidAdvanceDays": "أيام المسبق يجب أن تكون ≥ 0 أو فارغة.",
+    "invalidFlagThreshold": "العتبات يجب أن تكون > 0.",
+    "notAuthorized": "لا صلاحية لتعديل الإعدادات."
   },
   "analytics": {
     "title": "التحليلات",
@@ -206,6 +223,12 @@
   },
   "demo": {
     "banner": "وضع العرض — بيانات تجريبية"
+  },
+  "unitMessages": {
+    "removeFromDashboard": "إزالة من اللوحة",
+    "removeConfirm": "إزالة من لوحة الموظفين؟ الضيوف سيرونها في التطبيق.",
+    "removing": "جاري الإزالة…",
+    "removeFailed": "تعذر إزالة الرسالة."
   },
   "guestPatterns": {
     "title": "أنماط الضيوف",

@@ -139,7 +139,24 @@
     "seasonDatesRequired": "Season start and end dates are required.",
     "seasonEndBeforeStart": "Season end must be on or after the start date.",
     "saved": "Configuration saved.",
-    "loading": "Loading configuration…"
+    "loading": "Loading configuration…",
+    "subtitleAdmin": "Default chalet invite limits and anti-resale rules for {{name}}.",
+    "tabInviteDefaults": "Invite defaults",
+    "tabResaleLimits": "Resale limits",
+    "chaletDefaultsHint": "New chalets use these weekday and weekend limits each month. Use Units to grant one-off bonuses.",
+    "resaleTitle": "Anti-resale limits",
+    "resaleHint": "Leave blank for unlimited. These apply resort-wide and do not change per-unit allowances.",
+    "dailyInvitationCap": "Daily invitation cap",
+    "maxAdvanceDays": "Max advance days",
+    "flagChalet": "Guest Patterns flag — chalet",
+    "flagCabine": "Guest Patterns flag — cabine",
+    "flagThresholdHint": "Flag thresholds only highlight units on Guest Patterns; they never block issuing.",
+    "unlimitedPlaceholder": "Unlimited",
+    "invalidChaletLimits": "Chalet weekday and weekend limits must be zero or higher.",
+    "invalidDailyCap": "Daily cap must be greater than zero, or leave blank for unlimited.",
+    "invalidAdvanceDays": "Max advance days must be zero or higher, or leave blank for unlimited.",
+    "invalidFlagThreshold": "Flag thresholds must be greater than zero.",
+    "notAuthorized": "You do not have permission to edit resort configuration."
   },
   "analytics": {
     "title": "Analytics",
@@ -240,6 +257,12 @@
   },
   "demo": {
     "banner": "Demo mode — sample data only"
+  },
+  "unitMessages": {
+    "removeFromDashboard": "Remove from dashboard",
+    "removeConfirm": "Remove this message from the staff dashboard? Guests who already received it will still see it in the app.",
+    "removing": "Removing…",
+    "removeFailed": "Could not remove message."
   },
   "guestPatterns": {
     "title": "Guest Patterns",

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
@@ -26,6 +27,7 @@ interface SelectedUnit {
 }
 
 export function MessagesPage() {
+  const { t } = useTranslation()
   const { resortId, hasPermission, session } = useAuth()
   const canWrite = hasPermission(PERMISSIONS.ANNOUNCEMENTS_WRITE)
 
@@ -41,6 +43,7 @@ export function MessagesPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [statusNote, setStatusNote] = useState<string | null>(null)
+  const [removingId, setRemovingId] = useState<string | null>(null)
 
   const loadMessages = useCallback(async () => {
     if (!resortId) return
@@ -50,6 +53,7 @@ export function MessagesPage() {
       .from('unit_messages')
       .select('id, resort_id, asset_id, title, body, created_at, assets(label, asset_type)')
       .eq('resort_id', resortId)
+      .is('archived_by_staff_at', null)
       .order('created_at', { ascending: false })
       .limit(100)
 
@@ -138,6 +142,34 @@ export function MessagesPage() {
     await loadMessages()
   }
 
+  async function handleRemoveFromDashboard(message: UnitMessageRow) {
+    if (!canWrite) return
+    if (!confirm(t('unitMessages.removeConfirm'))) return
+
+    setRemovingId(message.id)
+    setError(null)
+
+    const { data, error: rpcError } = await supabase.rpc('archive_unit_message_for_staff', {
+      p_message_id: message.id,
+    })
+
+    if (rpcError) {
+      setError(rpcError.message)
+      setRemovingId(null)
+      return
+    }
+
+    const payload = data as { error?: string; ok?: boolean } | null
+    if (payload?.error) {
+      setError(payload.error === 'NOT_AUTHORIZED' ? t('unitMessages.removeFailed') : payload.error)
+      setRemovingId(null)
+      return
+    }
+
+    setMessages((current) => current.filter((m) => m.id !== message.id))
+    setRemovingId(null)
+  }
+
   if (loading) return <Spinner label="Loading messages…" />
 
   return (
@@ -172,9 +204,20 @@ export function MessagesPage() {
                   {message.assets?.label ?? 'Unit'} · {formatDateTime(message.created_at)}
                 </p>
               </div>
-              <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium capitalize text-gray-600">
-                {message.assets?.asset_type ?? 'unit'}
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium capitalize text-gray-600">
+                  {message.assets?.asset_type ?? 'unit'}
+                </span>
+                {canWrite ? (
+                  <Button
+                    variant="ghost"
+                    onClick={() => void handleRemoveFromDashboard(message)}
+                    disabled={removingId === message.id}
+                  >
+                    {removingId === message.id ? t('unitMessages.removing') : t('unitMessages.removeFromDashboard')}
+                  </Button>
+                ) : null}
+              </div>
             </div>
             <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">{message.body}</p>
           </article>
