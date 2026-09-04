@@ -31,6 +31,7 @@
     "guestPatterns": "Guest Patterns",
     "announcements": "Announcements",
     "messages": "Messages",
+    "inviteQuotas": "Invite Quotas",
     "listings": "Marketplace",
     "events": "Events",
     "receptionStaff": "Reception staff",
@@ -41,6 +42,66 @@
     "overview": "Overview",
     "resorts": "Resorts",
     "resortAdmins": "Resort admins"
+  },
+  "inviteQuotas": {
+    "title": "Invite Quotas",
+    "subtitle": "Hand over and adjust invitation quotas for each unit.",
+    "loading": "Loading invite quotas…",
+    "loadFailed": "Could not load invite quotas.",
+    "saveFailed": "Could not save the quota.",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "search": "Search",
+    "searchPlaceholder": "Unit label…",
+    "filter": "Filter",
+    "filters": {
+      "all": "All",
+      "notHanded": "Not handed",
+      "handed": "Handed",
+      "chalets": "Chalets",
+      "cabines": "Cabines"
+    },
+    "mode": {
+      "automatic": "Automatic",
+      "manual": "Manual"
+    },
+    "columns": {
+      "unit": "Unit",
+      "type": "Type",
+      "weekday": "Weekday quota",
+      "weekend": "Weekend quota",
+      "used": "Used (wd/we)",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "not_handed": "Not handed",
+      "handed": "Handed",
+      "automatic": "Automatic"
+    },
+    "handOver": "Hand over",
+    "add": "Add",
+    "remove": "Remove",
+    "empty": "No units match your filters.",
+    "activity": "Activity log",
+    "eventColumns": {
+      "date": "Date",
+      "user": "Username",
+      "action": "Action",
+      "unit": "Unit",
+      "deltas": "Deltas (wd/we)"
+    },
+    "noActivity": "No quota activity yet.",
+    "modal": {
+      "hand_over": "Hand over quota — {{unit}}",
+      "add": "Add quota — {{unit}}",
+      "remove": "Remove quota — {{unit}}"
+    },
+    "weekdayAmount": "Weekday amount",
+    "weekendAmount": "Weekend amount",
+    "note": "Note (optional)",
+    "confirm": "Confirm",
+    "enterAdjustment": "Enter at least one positive amount."
   },
   "login": {
     "portal": "Staff Portal",

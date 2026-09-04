@@ -26,6 +26,7 @@ import { EventsPage } from './pages/admin/EventsPage'
 import { SuperMapEditorPage } from './pages/superadmin/SuperMapEditorPage'
 import { SuperGalleryPage } from './pages/superadmin/SuperGalleryPage'
 import { SuperInfoPage } from './pages/superadmin/SuperInfoPage'
+import { InviteQuotasPage } from './pages/admin/InviteQuotasPage'
 
 function RootRedirect() {
   const { isSuperAdmin, hasDashboard, hasReception, hasScannerReception, hasScannerGate, view } =
@@ -176,6 +177,9 @@ export default function App() {
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route element={<RequirePermission permission={PERMISSIONS.ANNOUNCEMENTS_WRITE} />}>
             <Route path="messages" element={<MessagesPage />} />
+          </Route>
+          <Route element={<RequirePermission permission={PERMISSIONS.INVITATIONS_QUOTA} />}>
+            <Route path="invite-quotas" element={<InviteQuotasPage />} />
           </Route>
           <Route element={<RequireEventsEnabled />}>
             <Route element={<RequireEventsWrite />}>

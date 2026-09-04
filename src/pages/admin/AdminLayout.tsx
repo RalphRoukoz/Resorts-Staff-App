@@ -25,6 +25,7 @@ const eventsNavItem = { to: '/admin/events', labelKey: 'nav.events' } as const
 const writeNavItems = [
   { to: '/admin/configuration', labelKey: 'nav.configuration', permission: PERMISSIONS.DASHBOARD_WRITE },
   { to: '/admin/messages', labelKey: 'nav.messages', permission: PERMISSIONS.ANNOUNCEMENTS_WRITE },
+  { to: '/admin/invite-quotas', labelKey: 'nav.inviteQuotas', permission: PERMISSIONS.INVITATIONS_QUOTA },
   { to: '/admin/staff', labelKey: 'nav.staff', permission: PERMISSIONS.STAFF_MANAGE },
 ] as const
 
