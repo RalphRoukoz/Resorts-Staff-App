@@ -6,7 +6,11 @@ import { Modal } from '../../components/ui/Modal'
 import { Spinner } from '../../components/ui/Spinner'
 import { DAY_LABELS } from '../../lib/dates'
 import { supabase } from '../../lib/supabase'
-import type { PeriodAllowanceMode, ResortWithStats } from '../../types/database'
+import type {
+  InvitationQuotaMode,
+  PeriodAllowanceMode,
+  ResortWithStats,
+} from '../../types/database'
 
 const DEFAULT_ACCENT = '#1A1A1A'
 const LOGO_BUCKET = 'resort-logos'
@@ -36,6 +40,7 @@ interface ResortForm {
   max_advance_days: string
   distinct_guests_flag_chalet: string
   distinct_guests_flag_cabine: string
+  invitation_quota_mode: InvitationQuotaMode
 }
 
 const emptyForm: ResortForm = {
@@ -63,6 +68,7 @@ const emptyForm: ResortForm = {
   max_advance_days: '',
   distinct_guests_flag_chalet: '20',
   distinct_guests_flag_cabine: '8',
+  invitation_quota_mode: 'automatic',
 }
 
 function toggleDay(days: number[], day: number): number[] {
@@ -164,6 +170,7 @@ export function SuperResortsPage() {
       max_advance_days: resort.max_advance_days != null ? String(resort.max_advance_days) : '',
       distinct_guests_flag_chalet: String(resort.distinct_guests_flag_chalet ?? 20),
       distinct_guests_flag_cabine: String(resort.distinct_guests_flag_cabine ?? 8),
+      invitation_quota_mode: resort.invitation_quota_mode ?? 'automatic',
     })
     setLogoFile(null)
     setFormError(null)
@@ -244,6 +251,7 @@ export function SuperResortsPage() {
       max_advance_days: form.max_advance_days.trim() ? Number(form.max_advance_days) : null,
       distinct_guests_flag_chalet: Number(form.distinct_guests_flag_chalet) || 20,
       distinct_guests_flag_cabine: Number(form.distinct_guests_flag_cabine) || 8,
+      invitation_quota_mode: form.invitation_quota_mode,
     }
 
     if (editingId) {
@@ -552,6 +560,43 @@ export function SuperResortsPage() {
               <p className="text-sm text-gray-500">
                 Flag thresholds only highlight units on the Guest Patterns page; they never block issuing.
               </p>
+            </div>
+
+            <div className="space-y-4 rounded-2xl border border-[#ECECEC] bg-[#FAFAFA] p-4">
+              <p className="text-sm font-semibold text-[#1A1A1A]">Invitation quota mode</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-white px-4 py-3">
+                  <input
+                    type="radio"
+                    name="invitationQuotaMode"
+                    className="mt-0.5"
+                    checked={form.invitation_quota_mode === 'automatic'}
+                    onChange={() => setForm({ ...form, invitation_quota_mode: 'automatic' })}
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-[#1A1A1A]">Automatic</span>
+                    <span className="mt-0.5 block text-sm text-gray-500">
+                      Unit quotas apply immediately each month without staff handover.
+                    </span>
+                  </span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-white px-4 py-3">
+                  <input
+                    type="radio"
+                    name="invitationQuotaMode"
+                    className="mt-0.5"
+                    checked={form.invitation_quota_mode === 'manual'}
+                    onChange={() => setForm({ ...form, invitation_quota_mode: 'manual' })}
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-[#1A1A1A]">Manual handout</span>
+                    <span className="mt-0.5 block text-sm text-gray-500">
+                      Staff must hand over monthly quotas. Leftover quota clears at the start of each
+                      month.
+                    </span>
+                  </span>
+                </label>
+              </div>
             </div>
 
             <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-4 py-3">
