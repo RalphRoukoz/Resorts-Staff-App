@@ -12,7 +12,7 @@ import { resortLimitsForAssetType } from '../../lib/resortLimits'
 import { PAGE_SIZE, totalPages } from '../../lib/pagination'
 import { displayPhoneList, isValidPhone, parsePhoneList, PHONE_ERROR, normalizePhone } from '../../lib/phone'
 import { supabase } from '../../lib/supabase'
-import type { Asset, AssetInviteAllowance, AssetType, InviteAllowanceBucket, Resort } from '../../types/database'
+import type { Asset, AssetInviteAllowance, AssetType, InviteAllowanceBucket } from '../../types/database'
 
 interface UnitForm {
   label: string
@@ -28,14 +28,6 @@ const emptyForm: UnitForm = {
   owner_last_name: '',
   owner_phones_text: '',
   asset_type: 'chalet',
-}
-
-function unitSupportsBonusInvites(unit: Asset, resort: Resort | null): boolean {
-  if (unit.asset_type === 'chalet') return true
-  if (unit.asset_type === 'cabine') {
-    return Boolean(resort?.cabine_invites_enabled && resort?.cabine_limit_invites)
-  }
-  return false
 }
 
 function allowanceCell(
@@ -95,7 +87,6 @@ export function UnitsPage() {
   const { t } = useTranslation()
   const { resortId, resort, hasPermission } = useAuth()
   const canManageUnits = hasPermission(PERMISSIONS.UNITS_WRITE)
-  const canGrantBonus = hasPermission(PERMISSIONS.INVITATIONS_BONUS)
 
   const [units, setUnits] = useState<Asset[]>([])
   const [allowances, setAllowances] = useState<Record<string, AssetInviteAllowance>>({})
@@ -111,13 +102,6 @@ export function UnitsPage() {
   const [form, setForm] = useState<UnitForm>(emptyForm)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-
-  const [bonusUnit, setBonusUnit] = useState<Asset | null>(null)
-  const [bonusMode, setBonusMode] = useState<'add' | 'remove'>('add')
-  const [weekdayAdd, setWeekdayAdd] = useState('1')
-  const [weekendAdd, setWeekendAdd] = useState('0')
-  const [bonusError, setBonusError] = useState<string | null>(null)
-  const [bonusSaving, setBonusSaving] = useState(false)
 
   const pages = totalPages(total)
 
@@ -248,14 +232,6 @@ export function UnitsPage() {
     setModalOpen(true)
   }
 
-  function openBonus(unit: Asset, mode: 'add' | 'remove' = 'add') {
-    setBonusUnit(unit)
-    setBonusMode(mode)
-    setWeekdayAdd(mode === 'add' ? '1' : '0')
-    setWeekendAdd('0')
-    setBonusError(null)
-  }
-
   async function handleSave() {
     if (!resortId) return
     if (!form.label.trim()) {
@@ -314,44 +290,6 @@ export function UnitsPage() {
     }
 
     setSaving(false)
-  }
-
-  async function handleGrantBonus() {
-    if (!bonusUnit) return
-    const wd = Math.max(0, Math.floor(Number(weekdayAdd) || 0))
-    const we = Math.max(0, Math.floor(Number(weekendAdd) || 0))
-    if (wd === 0 && we === 0) {
-      setBonusError(
-        bonusMode === 'remove'
-          ? 'Enter at least one amount to remove'
-          : 'Enter at least one positive bonus amount',
-      )
-      return
-    }
-
-    setBonusSaving(true)
-    setBonusError(null)
-
-    const { error: rpcError } =
-      bonusMode === 'remove'
-        ? await supabase.rpc('remove_asset_invite_bonus', {
-            p_asset: bonusUnit.id,
-            p_weekday_remove: wd,
-            p_weekend_remove: we,
-          })
-        : await supabase.rpc('grant_asset_invite_bonus', {
-            p_asset: bonusUnit.id,
-            p_weekday_add: wd,
-            p_weekend_add: we,
-          })
-
-    if (rpcError) {
-      setBonusError(rpcError.message)
-    } else {
-      setBonusUnit(null)
-      await loadUnits()
-    }
-    setBonusSaving(false)
   }
 
   async function handleDelete(unit: Asset) {
@@ -427,9 +365,7 @@ export function UnitsPage() {
                   <th className="px-4 py-3 font-medium">{t('units.ownerPhones')}</th>
                   <th className="px-4 py-3 font-medium">Weekday</th>
                   <th className="px-4 py-3 font-medium">Weekend</th>
-                  {canManageUnits || canGrantBonus ? (
-                    <th className="px-4 py-3 font-medium">Actions</th>
-                  ) : null}
+                  {canManageUnits ? <th className="px-4 py-3 font-medium">Actions</th> : null}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -477,29 +413,15 @@ export function UnitsPage() {
                           <span className="ml-1 text-xs text-amber-600">+{allowance.weekend.bonus} bonus</span>
                         ) : null}
                       </td>
-                      {canManageUnits || canGrantBonus ? (
+                      {canManageUnits ? (
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-2">
-                            {canGrantBonus && unitSupportsBonusInvites(unit, resort) ? (
-                              <>
-                                <Button variant="secondary" onClick={() => openBonus(unit, 'add')}>
-                                  {t('units.addInvites')}
-                                </Button>
-                                <Button variant="secondary" onClick={() => openBonus(unit, 'remove')}>
-                                  {t('units.removeInvites')}
-                                </Button>
-                              </>
-                            ) : null}
-                            {canManageUnits ? (
-                              <>
-                                <Button variant="secondary" onClick={() => openEdit(unit)}>
-                                  Edit
-                                </Button>
-                                <Button variant="danger" onClick={() => void handleDelete(unit)}>
-                                  Delete
-                                </Button>
-                              </>
-                            ) : null}
+                            <Button variant="secondary" onClick={() => openEdit(unit)}>
+                              Edit
+                            </Button>
+                            <Button variant="danger" onClick={() => void handleDelete(unit)}>
+                              Delete
+                            </Button>
                           </div>
                         </td>
                       ) : null}
@@ -509,7 +431,7 @@ export function UnitsPage() {
                 {units.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={canManageUnits || canGrantBonus ? 7 : 6}
+                      colSpan={canManageUnits ? 7 : 6}
                       className="px-4 py-10 text-center text-gray-400"
                     >
                       No units match your filters.
@@ -594,61 +516,8 @@ export function UnitsPage() {
             <p className="text-sm text-gray-500">
               Monthly invite limits come from resort defaults
               {resort ? ` (${resort.chalet_weekday_limit} weekday / ${resort.chalet_weekend_limit} weekend for chalets).` : '.'}
-              Use &quot;Add invites&quot; to grant extra invitations for the current month only.
             </p>
             {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
-          </div>
-        </Modal>
-      ) : null}
-
-      {bonusUnit && canGrantBonus ? (
-        <Modal
-          title={`${bonusMode === 'remove' ? 'Remove bonus invites' : 'Add bonus invites'} — ${bonusUnit.label}`}
-          onClose={() => setBonusUnit(null)}
-          footer={
-            <>
-              <Button variant="secondary" onClick={() => setBonusUnit(null)}>
-                Cancel
-              </Button>
-              <Button onClick={() => void handleGrantBonus()} disabled={bonusSaving}>
-                {bonusSaving
-                  ? bonusMode === 'remove'
-                    ? 'Removing…'
-                    : 'Adding…'
-                  : bonusMode === 'remove'
-                    ? 'Remove from this month'
-                    : 'Add to this month'}
-              </Button>
-            </>
-          }
-        >
-          <div className="space-y-4">
-            <p className="text-sm text-gray-500">
-              {bonusMode === 'remove'
-                ? 'Removes bonus invitations for the current calendar month only. Amounts cannot go below zero.'
-                : 'Bonuses stack for the current calendar month and reset automatically next month. Base allowance stays the resort default.'}
-            </p>
-            {bonusMode === 'remove' && allowances[bonusUnit.id] ? (
-              <p className="text-xs text-gray-500">
-                Current bonus: {allowances[bonusUnit.id].weekday.bonus ?? 0} weekday ·{' '}
-                {allowances[bonusUnit.id].weekend.bonus ?? 0} weekend
-              </p>
-            ) : null}
-            <Input
-              label={bonusMode === 'remove' ? 'Weekday invitations to remove' : 'Extra weekday invitations'}
-              type="number"
-              min={0}
-              value={weekdayAdd}
-              onChange={(e) => setWeekdayAdd(e.target.value.replace(/[^\d]/g, ''))}
-            />
-            <Input
-              label={bonusMode === 'remove' ? 'Weekend invitations to remove' : 'Extra weekend invitations'}
-              type="number"
-              min={0}
-              value={weekendAdd}
-              onChange={(e) => setWeekendAdd(e.target.value.replace(/[^\d]/g, ''))}
-            />
-            {bonusError ? <p className="text-sm text-red-600">{bonusError}</p> : null}
           </div>
         </Modal>
       ) : null}
