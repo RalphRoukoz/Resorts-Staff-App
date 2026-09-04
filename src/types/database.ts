@@ -25,6 +25,22 @@ export type ScanCheckpoint = 'reception' | 'gate'
 
 export type DayType = 'weekday' | 'weekend'
 
+export type InvitationQuotaMode = 'automatic' | 'manual'
+
+export type InviteQuotaUnitRow = {
+  asset_id: string
+  label: string
+  asset_type: AssetType
+  weekday_quota: number | null
+  weekend_quota: number | null
+  weekday_used: number
+  weekend_used: number
+  handed_over_at: string | null
+  status: 'not_handed' | 'handed' | 'automatic'
+  default_weekday: number
+  default_weekend: number
+}
+
 export interface Resort {
   id: string
   name: string
@@ -58,6 +74,7 @@ export interface Resort {
   daily_invitation_cap?: number | null
   /** Max days ahead invitations may be issued. null = unlimited. */
   max_advance_days?: number | null
+  invitation_quota_mode?: InvitationQuotaMode
   distinct_guests_flag_chalet?: number
   distinct_guests_flag_cabine?: number
   created_at: string

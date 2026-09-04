@@ -4,6 +4,7 @@ export const PERMISSIONS = {
   DASHBOARD_READ: 'dashboard.read',
   DASHBOARD_WRITE: 'dashboard.write',
   INVITATIONS_BONUS: 'invitations.bonus',
+  INVITATIONS_QUOTA: 'invitations.quota',
   ANNOUNCEMENTS_WRITE: 'announcements.write',
   STAFF_MANAGE: 'staff.manage',
   /** @deprecated Resort config is super-admin only — not assignable in role editors. */
@@ -25,7 +26,7 @@ export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
 export const ALL_PERMISSIONS: Permission[] = [
   PERMISSIONS.DASHBOARD_READ,
   PERMISSIONS.DASHBOARD_WRITE,
-  PERMISSIONS.INVITATIONS_BONUS,
+  PERMISSIONS.INVITATIONS_QUOTA,
   PERMISSIONS.ANNOUNCEMENTS_WRITE,
   PERMISSIONS.STAFF_MANAGE,
   PERMISSIONS.SCANNER_RECEPTION,
@@ -41,6 +42,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'dashboard.read': 'View dashboard',
   'dashboard.write': 'Full dashboard write access',
   'invitations.bonus': 'Grant or remove bonus invitations',
+  'invitations.quota': 'Manage invitation quotas',
   'announcements.write': 'Manage announcements',
   'staff.manage': 'Manage staff accounts',
   'config.write': 'Edit resort configuration (deprecated — super admin only)',
@@ -58,6 +60,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'dashboard.read': 'View Today, units, rentals, and read-only dashboard pages.',
   'dashboard.write': 'Create and edit units, rentals, announcements, and other dashboard data.',
   'invitations.bonus': 'Grant or remove extra weekday/weekend invitations for a unit for the current period.',
+  'invitations.quota': 'Hand over, add, remove, and manage monthly invitation quotas per unit.',
   'announcements.write': 'Create, edit, and delete resort announcements.',
   'staff.manage': 'Add staff accounts, assign roles, and reset passwords.',
   'config.write': 'Deprecated. Invite limits and season settings are configured by platform super admins.',
@@ -80,6 +83,9 @@ function expandPermissions(perms: Iterable<string>): Set<Permission> {
     if (p === PERMISSIONS.SCANNER) {
       set.add(PERMISSIONS.SCANNER_RECEPTION)
       set.add(PERMISSIONS.SCANNER_GATE)
+    }
+    if (p === PERMISSIONS.INVITATIONS_BONUS) {
+      set.add(PERMISSIONS.INVITATIONS_QUOTA)
     }
   }
   return set
