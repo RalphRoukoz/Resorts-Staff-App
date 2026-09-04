@@ -160,8 +160,6 @@ AS $$
 DECLARE
   v_resort_id uuid;
   v_asset_type text;
-  v_asset_weekday_limit integer;
-  v_asset_weekend_limit integer;
   v_quota_mode text;
   v_resort_weekday_limit integer;
   v_resort_weekend_limit integer;
@@ -180,8 +178,6 @@ BEGIN
   SELECT
     a.resort_id,
     a.asset_type,
-    a.weekday_limit,
-    a.weekend_limit,
     r.invitation_quota_mode,
     CASE
       WHEN a.asset_type = 'cabine' THEN r.cabine_weekday_limit
@@ -194,8 +190,6 @@ BEGIN
   INTO
     v_resort_id,
     v_asset_type,
-    v_asset_weekday_limit,
-    v_asset_weekend_limit,
     v_quota_mode,
     v_resort_weekday_limit,
     v_resort_weekend_limit
@@ -305,10 +299,10 @@ BEGIN
     END IF;
 
     v_weekday_after :=
-      coalesce(v_asset_weekday_limit, v_resort_weekday_limit, 0)
+      coalesce(v_resort_weekday_limit, 0)
       + v_bonus.weekday_bonus;
     v_weekend_after :=
-      coalesce(v_asset_weekend_limit, v_resort_weekend_limit, 0)
+      coalesce(v_resort_weekend_limit, 0)
       + v_bonus.weekend_bonus;
   END IF;
 
