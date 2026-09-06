@@ -119,10 +119,22 @@ export function InviteQuotasPage() {
     })
   }, [filter, search, units])
 
-  function openModal(unit: InviteQuotaUnitRow, action: ModalAction) {
-    setModal({ unit, action })
-    setWeekday(action === 'hand_over' ? String(unit.default_weekday) : '0')
-    setWeekend(action === 'hand_over' ? String(unit.default_weekend) : '0')
+  async function openModal(unit: InviteQuotaUnitRow, action: ModalAction) {
+    let nextUnit = unit
+    if (action === 'hand_over' && resortId) {
+      // Refresh so hand-over prefills match latest superadmin resort defaults.
+      const { data } = await supabase.rpc('list_resort_invite_quotas', { p_resort_id: resortId })
+      const payload = data as QuotaListPayload | null
+      if (payload && !payload.error && Array.isArray(payload.units)) {
+        setUnits(payload.units)
+        setPeriodYm(payload.period_ym ?? '')
+        setPayloadMode(payload.quota_mode ?? 'automatic')
+        nextUnit = payload.units.find((row) => row.asset_id === unit.asset_id) ?? unit
+      }
+    }
+    setModal({ unit: nextUnit, action })
+    setWeekday(action === 'hand_over' ? String(nextUnit.default_weekday) : '0')
+    setWeekend(action === 'hand_over' ? String(nextUnit.default_weekend) : '0')
     setNote('')
     setFormError(null)
   }
@@ -244,7 +256,7 @@ export function InviteQuotasPage() {
                 </td>
                 <td className="px-4 py-3">
                   {quotaMode === 'manual' && unit.status === 'not_handed' ? (
-                    <Button onClick={() => openModal(unit, 'hand_over')}>{t('inviteQuotas.handOver')}</Button>
+                    <Button onClick={() => void openModal(unit, 'hand_over')}>{t('inviteQuotas.handOver')}</Button>
                   ) : (
                     <div className="flex gap-2">
                       <Button variant="secondary" onClick={() => openModal(unit, 'add')}>{t('inviteQuotas.add')}</Button>
