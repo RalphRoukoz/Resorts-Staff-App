@@ -48,6 +48,7 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
   const [result, setResult] = useState<ValidateResult | null>(null)
   const [processing, setProcessing] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const processingRef = useRef(false)
 
@@ -118,7 +119,7 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
 
     try {
       await scanner.start(
-        { facingMode: 'environment' },
+        { facingMode },
         {
           fps: 24,
           qrbox: (viewfinderWidth, viewfinderHeight) => {
@@ -135,7 +136,7 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
     } catch (err) {
       setCameraError(err instanceof Error ? err.message : 'Camera unavailable. HTTPS is required for scanning.')
     }
-  }, [handleScan, stopScanner])
+  }, [facingMode, handleScan, stopScanner])
 
   useEffect(() => {
     void startScanner()
@@ -147,6 +148,10 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
   function scanNext() {
     primeAudio()
     void startScanner()
+  }
+
+  function flipCamera() {
+    setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))
   }
 
   function backToAdmin() {
@@ -263,6 +268,13 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
           className="w-full max-w-md overflow-hidden rounded-2xl border border-[#ECECEC] bg-white shadow-sm [&_video]:!scale-x-100"
           style={{ direction: 'ltr' }}
         />
+        <button
+          type="button"
+          onClick={flipCamera}
+          className="mt-4 min-h-11 rounded-xl border border-[#ECECEC] bg-white px-4 py-2.5 text-sm font-semibold text-[#1A1A1A] shadow-sm transition hover:bg-gray-50"
+        >
+          {t('scanner.flipCamera')}
+        </button>
         {cameraError ? <p className="mt-4 max-w-md text-center text-sm text-red-600">{cameraError}</p> : null}
       </div>
     </div>

@@ -121,6 +121,7 @@
     "reception": "Reception scanner",
     "gate": "Gate scanner",
     "pointCamera": "Point camera at invitation QR code",
+    "flipCamera": "Flip camera",
     "validating": "Validating…",
     "scanNext": "Scan next",
     "valid": "Valid invitation",

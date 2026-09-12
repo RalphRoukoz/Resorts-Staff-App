@@ -60,6 +60,7 @@
     "reception": "Scanner réception",
     "gate": "Scanner portail",
     "pointCamera": "Pointez la caméra sur le QR d'invitation",
+    "flipCamera": "Retourner la caméra",
     "validating": "Validation…",
     "scanNext": "Scanner suivant",
     "valid": "Invitation valide",
