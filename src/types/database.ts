@@ -39,6 +39,8 @@ export type InviteQuotaUnitRow = {
   status: 'not_handed' | 'handed' | 'automatic'
   default_weekday: number
   default_weekend: number
+  occupancy?: 'rented' | 'owner' | 'n/a'
+  is_rented?: boolean
 }
 
 export interface Resort {
@@ -49,6 +51,12 @@ export interface Resort {
   chalet_weekend_limit: number
   cabine_weekday_limit: number
   cabine_weekend_limit: number
+  /** When true, hand-over uses owner vs tenant chalet limit pairs. */
+  chalet_owner_tenant_limits_enabled?: boolean
+  chalet_owner_weekday_limit?: number
+  chalet_owner_weekend_limit?: number
+  chalet_tenant_weekday_limit?: number
+  chalet_tenant_weekend_limit?: number
   cabine_invites_enabled: boolean
   cabine_limit_invites: boolean
   cabine_paid_invites: boolean

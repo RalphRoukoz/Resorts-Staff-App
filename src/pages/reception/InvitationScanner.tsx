@@ -156,7 +156,7 @@ export function InvitationScanner({ checkpoint }: InvitationScannerProps) {
 
   function backToAdmin() {
     setView('admin')
-    navigate('/admin/units')
+    navigate('/admin/overview')
   }
 
   if (phase === 'result' && result) {

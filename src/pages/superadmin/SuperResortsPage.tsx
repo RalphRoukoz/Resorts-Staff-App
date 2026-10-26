@@ -19,6 +19,11 @@ interface ResortForm {
   name: string
   chalet_weekday_limit: string
   chalet_weekend_limit: string
+  chalet_owner_tenant_limits_enabled: boolean
+  chalet_owner_weekday_limit: string
+  chalet_owner_weekend_limit: string
+  chalet_tenant_weekday_limit: string
+  chalet_tenant_weekend_limit: string
   cabine_weekday_limit: string
   cabine_weekend_limit: string
   cabine_invites_enabled: boolean
@@ -47,6 +52,11 @@ const emptyForm: ResortForm = {
   name: '',
   chalet_weekday_limit: '8',
   chalet_weekend_limit: '3',
+  chalet_owner_tenant_limits_enabled: false,
+  chalet_owner_weekday_limit: '8',
+  chalet_owner_weekend_limit: '3',
+  chalet_tenant_weekday_limit: '8',
+  chalet_tenant_weekend_limit: '3',
   cabine_weekday_limit: '8',
   cabine_weekend_limit: '3',
   cabine_invites_enabled: true,
@@ -148,6 +158,19 @@ export function SuperResortsPage() {
       name: resort.name,
       chalet_weekday_limit: String(resort.chalet_weekday_limit),
       chalet_weekend_limit: String(resort.chalet_weekend_limit),
+      chalet_owner_tenant_limits_enabled: resort.chalet_owner_tenant_limits_enabled ?? false,
+      chalet_owner_weekday_limit: String(
+        resort.chalet_owner_weekday_limit ?? resort.chalet_weekday_limit,
+      ),
+      chalet_owner_weekend_limit: String(
+        resort.chalet_owner_weekend_limit ?? resort.chalet_weekend_limit,
+      ),
+      chalet_tenant_weekday_limit: String(
+        resort.chalet_tenant_weekday_limit ?? resort.chalet_weekday_limit,
+      ),
+      chalet_tenant_weekend_limit: String(
+        resort.chalet_tenant_weekend_limit ?? resort.chalet_weekend_limit,
+      ),
       cabine_weekday_limit: String(resort.cabine_weekday_limit),
       cabine_weekend_limit: String(resort.cabine_weekend_limit),
       cabine_invites_enabled: resort.cabine_invites_enabled,
@@ -227,6 +250,11 @@ export function SuperResortsPage() {
       name: form.name.trim(),
       chalet_weekday_limit: Number(form.chalet_weekday_limit) || 0,
       chalet_weekend_limit: Number(form.chalet_weekend_limit) || 0,
+      chalet_owner_tenant_limits_enabled: form.chalet_owner_tenant_limits_enabled,
+      chalet_owner_weekday_limit: Number(form.chalet_owner_weekday_limit) || 0,
+      chalet_owner_weekend_limit: Number(form.chalet_owner_weekend_limit) || 0,
+      chalet_tenant_weekday_limit: Number(form.chalet_tenant_weekday_limit) || 0,
+      chalet_tenant_weekend_limit: Number(form.chalet_tenant_weekend_limit) || 0,
       cabine_weekday_limit: Number(form.cabine_weekday_limit) || 0,
       cabine_weekend_limit: Number(form.cabine_weekend_limit) || 0,
       cabine_invites_enabled: form.cabine_invites_enabled,
@@ -661,21 +689,88 @@ export function SuperResortsPage() {
               </span>
             </label>
 
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#ECECEC] bg-[#FAFAFA] px-4 py-3">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-gray-300"
+                checked={form.chalet_owner_tenant_limits_enabled}
+                onChange={(e) => {
+                  const enabled = e.target.checked
+                  setForm((prev) => ({
+                    ...prev,
+                    chalet_owner_tenant_limits_enabled: enabled,
+                    ...(enabled
+                      ? {
+                          chalet_owner_weekday_limit: prev.chalet_owner_weekday_limit || prev.chalet_weekday_limit,
+                          chalet_owner_weekend_limit: prev.chalet_owner_weekend_limit || prev.chalet_weekend_limit,
+                          chalet_tenant_weekday_limit: prev.chalet_tenant_weekday_limit || prev.chalet_weekday_limit,
+                          chalet_tenant_weekend_limit: prev.chalet_tenant_weekend_limit || prev.chalet_weekend_limit,
+                        }
+                      : {}),
+                  }))
+                }}
+              />
+              <span>
+                <span className="block text-sm font-medium text-[#1A1A1A]">
+                  Separate owner vs tenant chalet limits
+                </span>
+                <span className="mt-0.5 block text-sm text-gray-500">
+                  When on, hand-over prefills use owner or tenant defaults based on active tenancy today.
+                  Cabines are unchanged.
+                </span>
+              </span>
+            </label>
+
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Chalet weekday limit"
-                type="number"
-                min={0}
-                value={form.chalet_weekday_limit}
-                onChange={(e) => setForm({ ...form, chalet_weekday_limit: e.target.value })}
-              />
-              <Input
-                label="Chalet weekend limit"
-                type="number"
-                min={0}
-                value={form.chalet_weekend_limit}
-                onChange={(e) => setForm({ ...form, chalet_weekend_limit: e.target.value })}
-              />
+              {form.chalet_owner_tenant_limits_enabled ? (
+                <>
+                  <Input
+                    label="Owner weekday limit"
+                    type="number"
+                    min={0}
+                    value={form.chalet_owner_weekday_limit}
+                    onChange={(e) => setForm({ ...form, chalet_owner_weekday_limit: e.target.value })}
+                  />
+                  <Input
+                    label="Owner weekend limit"
+                    type="number"
+                    min={0}
+                    value={form.chalet_owner_weekend_limit}
+                    onChange={(e) => setForm({ ...form, chalet_owner_weekend_limit: e.target.value })}
+                  />
+                  <Input
+                    label="Tenant weekday limit"
+                    type="number"
+                    min={0}
+                    value={form.chalet_tenant_weekday_limit}
+                    onChange={(e) => setForm({ ...form, chalet_tenant_weekday_limit: e.target.value })}
+                  />
+                  <Input
+                    label="Tenant weekend limit"
+                    type="number"
+                    min={0}
+                    value={form.chalet_tenant_weekend_limit}
+                    onChange={(e) => setForm({ ...form, chalet_tenant_weekend_limit: e.target.value })}
+                  />
+                </>
+              ) : (
+                <>
+                  <Input
+                    label="Chalet weekday limit"
+                    type="number"
+                    min={0}
+                    value={form.chalet_weekday_limit}
+                    onChange={(e) => setForm({ ...form, chalet_weekday_limit: e.target.value })}
+                  />
+                  <Input
+                    label="Chalet weekend limit"
+                    type="number"
+                    min={0}
+                    value={form.chalet_weekend_limit}
+                    onChange={(e) => setForm({ ...form, chalet_weekend_limit: e.target.value })}
+                  />
+                </>
+              )}
               {form.cabine_invites_enabled && form.cabine_limit_invites ? (
                 <>
                   <Input

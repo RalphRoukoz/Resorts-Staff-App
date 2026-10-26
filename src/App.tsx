@@ -27,6 +27,7 @@ import { SuperMapEditorPage } from './pages/superadmin/SuperMapEditorPage'
 import { SuperGalleryPage } from './pages/superadmin/SuperGalleryPage'
 import { SuperInfoPage } from './pages/superadmin/SuperInfoPage'
 import { InviteQuotasPage } from './pages/admin/InviteQuotasPage'
+import { OverviewPage } from './pages/admin/OverviewPage'
 
 function RootRedirect() {
   const { isSuperAdmin, hasDashboard, hasReception, hasScannerReception, hasScannerGate, view } =
@@ -37,7 +38,7 @@ function RootRedirect() {
   }
 
   if (hasDashboard && view === 'admin') {
-    return <Navigate to="/admin/units" replace />
+    return <Navigate to="/admin/overview" replace />
   }
 
   if (hasReception) {
@@ -74,13 +75,13 @@ function RequireDashboard() {
 
 function RequirePermission({ permission }: { permission: Permission }) {
   const { hasPermission } = useAuth()
-  if (!hasPermission(permission)) return <Navigate to="/admin/units" replace />
+  if (!hasPermission(permission)) return <Navigate to="/admin/overview" replace />
   return <Outlet />
 }
 
 function RequireReception() {
   const { hasReception } = useAuth()
-  if (!hasReception) return <Navigate to="/admin/units" replace />
+  if (!hasReception) return <Navigate to="/admin/overview" replace />
   return <Outlet />
 }
 
@@ -92,7 +93,7 @@ function RequireScannerCheckpoint({
   fallback: string
 }) {
   const { hasPermission, hasReception } = useAuth()
-  if (!hasReception) return <Navigate to="/admin/units" replace />
+  if (!hasReception) return <Navigate to="/admin/overview" replace />
   if (!hasPermission(permission)) return <Navigate to={fallback} replace />
   return <Outlet />
 }
@@ -100,7 +101,7 @@ function RequireScannerCheckpoint({
 function RequireMarketplace() {
   const { resort } = useAuth()
   if (resort?.marketplace_listings_enabled === false) {
-    return <Navigate to="/admin/units" replace />
+    return <Navigate to="/admin/overview" replace />
   }
   return <Outlet />
 }
@@ -108,7 +109,7 @@ function RequireMarketplace() {
 function RequireEventsEnabled() {
   const { resort } = useAuth()
   if (resort?.events_enabled !== true) {
-    return <Navigate to="/admin/units" replace />
+    return <Navigate to="/admin/overview" replace />
   }
   return <Outlet />
 }
@@ -119,7 +120,7 @@ function RequireEventsWrite() {
     !hasPermission(PERMISSIONS.EVENTS_WRITE) &&
     !hasPermission(PERMISSIONS.ANNOUNCEMENTS_WRITE)
   ) {
-    return <Navigate to="/admin/units" replace />
+    return <Navigate to="/admin/overview" replace />
   }
   return <Outlet />
 }
@@ -168,7 +169,8 @@ export default function App() {
         }
       >
         <Route element={<AdminLayout />}>
-          <Route index element={<Navigate to="units" replace />} />
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={<OverviewPage />} />
           <Route path="units" element={<UnitsPage />} />
           <Route path="rentals" element={<RentalsPage />} />
           <Route path="today" element={<TodayPage />} />

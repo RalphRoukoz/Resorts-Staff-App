@@ -1,64 +1,118 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import {
+  Buildings,
+  CalendarCheck,
+  CalendarStar,
+  ChartLine,
+  ChatCircleText,
+  GearSix,
+  House,
+  Key,
+  List,
+  Megaphone,
+  ShieldWarning,
+  SignOut,
+  Storefront,
+  Ticket,
+  UsersThree,
+  X,
+  type Icon,
+} from '@phosphor-icons/react'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
-import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
 import { PERMISSIONS } from '../../lib/permissions'
 import { DemoBanner } from '../../components/DemoBanner'
 
 const DEFAULT_ACCENT = '#1A1A1A'
 
-const readNavItems = [
-  { to: '/admin/units', labelKey: 'nav.units' },
-  { to: '/admin/rentals', labelKey: 'nav.rentals' },
-  { to: '/admin/today', labelKey: 'nav.today' },
-  { to: '/admin/analytics', labelKey: 'nav.analytics' },
-  { to: '/admin/guest-patterns', labelKey: 'nav.guestPatterns' },
-  { to: '/admin/announcements', labelKey: 'nav.announcements' },
-] as const
+interface NavItem {
+  to: string
+  labelKey: string
+  icon: Icon
+}
 
-const marketplaceNavItem = { to: '/admin/listings', labelKey: 'nav.listings' } as const
-
-const eventsNavItem = { to: '/admin/events', labelKey: 'nav.events' } as const
-
-const writeNavItems = [
-  { to: '/admin/configuration', labelKey: 'nav.configuration', permission: PERMISSIONS.DASHBOARD_WRITE },
-  { to: '/admin/messages', labelKey: 'nav.messages', permission: PERMISSIONS.ANNOUNCEMENTS_WRITE },
-  { to: '/admin/invite-quotas', labelKey: 'nav.inviteQuotas', permission: PERMISSIONS.INVITATIONS_QUOTA },
-  { to: '/admin/staff', labelKey: 'nav.staff', permission: PERMISSIONS.STAFF_MANAGE },
-] as const
+interface NavGroup {
+  labelKey: string | null
+  items: NavItem[]
+}
 
 export function AdminLayout() {
   const { t } = useTranslation()
   const { resort, canWrite, hasPermission, staffUsername, signOut } = useAuth()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const marketplaceEnabled = resort?.marketplace_listings_enabled !== false
-  const eventsEnabled = resort?.events_enabled === true
   const canManageEvents =
-    eventsEnabled &&
+    resort?.events_enabled === true &&
     (hasPermission(PERMISSIONS.EVENTS_WRITE) || hasPermission(PERMISSIONS.ANNOUNCEMENTS_WRITE))
-  const filteredWriteNav = writeNavItems.filter((item) => hasPermission(item.permission))
-  const navItems = [
-    ...readNavItems,
-    ...(marketplaceEnabled ? [marketplaceNavItem] : []),
-    ...(canManageEvents ? [eventsNavItem] : []),
-    ...filteredWriteNav,
-  ]
+
+  const groups: NavGroup[] = [
+    {
+      labelKey: null,
+      items: [{ to: '/admin/overview', labelKey: 'nav.overview', icon: House }],
+    },
+    {
+      labelKey: 'nav.groupDaily',
+      items: [
+        { to: '/admin/today', labelKey: 'nav.today', icon: CalendarCheck },
+        { to: '/admin/units', labelKey: 'nav.units', icon: Buildings },
+        { to: '/admin/rentals', labelKey: 'nav.rentals', icon: Key },
+        ...(hasPermission(PERMISSIONS.INVITATIONS_QUOTA)
+          ? [{ to: '/admin/invite-quotas', labelKey: 'nav.inviteQuotas', icon: Ticket }]
+          : []),
+      ],
+    },
+    {
+      labelKey: 'nav.groupCommunication',
+      items: [
+        { to: '/admin/announcements', labelKey: 'nav.announcements', icon: Megaphone },
+        ...(hasPermission(PERMISSIONS.ANNOUNCEMENTS_WRITE)
+          ? [{ to: '/admin/messages', labelKey: 'nav.messages', icon: ChatCircleText }]
+          : []),
+        ...(canManageEvents ? [{ to: '/admin/events', labelKey: 'nav.events', icon: CalendarStar }] : []),
+        ...(marketplaceEnabled ? [{ to: '/admin/listings', labelKey: 'nav.listings', icon: Storefront }] : []),
+      ],
+    },
+    {
+      labelKey: 'nav.groupInsights',
+      items: [
+        { to: '/admin/analytics', labelKey: 'nav.analytics', icon: ChartLine },
+        { to: '/admin/guest-patterns', labelKey: 'nav.guestPatterns', icon: ShieldWarning },
+      ],
+    },
+    {
+      labelKey: 'nav.groupSettings',
+      items: [
+        ...(hasPermission(PERMISSIONS.DASHBOARD_WRITE)
+          ? [{ to: '/admin/configuration', labelKey: 'nav.configuration', icon: GearSix }]
+          : []),
+        ...(hasPermission(PERMISSIONS.STAFF_MANAGE)
+          ? [{ to: '/admin/staff', labelKey: 'nav.staff', icon: UsersThree }]
+          : []),
+      ],
+    },
+  ].filter((group) => group.items.length > 0)
 
   const accent = resort?.primary_color || DEFAULT_ACCENT
   const rootStyle = { '--accent': accent } as CSSProperties
 
-  function navLinkStyle({ isActive }: { isActive: boolean }): CSSProperties {
-    return isActive ? { backgroundColor: `${accent}14`, color: accent } : {}
-  }
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [menuOpen])
 
-  const desktopNavClass = ({ isActive }: { isActive: boolean }) =>
-    `block rounded-lg px-3 py-2.5 text-sm font-medium tracking-tight transition duration-200 ${
-      isActive ? '' : 'text-gray-500 hover:bg-gray-50 hover:text-[#1A1A1A]'
-    }`
-
-  function BrandMark({ compact = false }: { compact?: boolean }) {
+  function renderBrandMark(compact = false) {
     if (resort?.logo_url) {
       return (
         <img
@@ -80,70 +134,124 @@ export function AdminLayout() {
     )
   }
 
+  function renderNavGroups() {
+    return (
+      <div className="space-y-5">
+        {groups.map((group) => (
+          <div key={group.labelKey ?? 'top'}>
+            {group.labelKey ? (
+              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                {t(group.labelKey)}
+              </p>
+            ) : null}
+            <ul className="space-y-0.5">
+              {group.items.map((item) => (
+                <li key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    onClick={() => setMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium tracking-tight transition duration-200 ${
+                        isActive
+                          ? 'bg-[color-mix(in_srgb,var(--accent)_9%,white)] text-[var(--accent)]'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-[#1A1A1A]'
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <item.icon size={20} weight={isActive ? 'fill' : 'regular'} aria-hidden />
+                        <span className="truncate">{t(item.labelKey)}</span>
+                      </>
+                    )}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  function renderAccountFooter() {
+    return (
+      <div className="border-t border-[#ECECEC] p-3">
+        {staffUsername ? (
+          <p className="mb-2 truncate px-3 text-xs text-gray-500" title={staffUsername}>
+            {t('app.signedInAs', { username: staffUsername })}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => void signOut()}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 hover:text-[#1A1A1A]"
+        >
+          <SignOut size={20} aria-hidden />
+          {t('common.signOut')}
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div style={rootStyle} className="flex min-h-screen bg-[#FAFAFA] text-[#1A1A1A]">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-[#ECECEC] bg-white lg:flex">
-        <div className="border-b border-[#ECECEC] px-5 py-7">
-          <BrandMark />
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-e border-[#ECECEC] bg-white lg:flex">
+        <div className="border-b border-[#ECECEC] px-5 py-6">
+          {renderBrandMark()}
           <div className="mt-4">
             <LanguageSwitcher />
           </div>
         </div>
-
-        <nav className="flex-1 space-y-0.5 p-3">
-          {navItems.map((item) => (
-            <NavLink key={item.to} to={item.to} className={desktopNavClass} style={navLinkStyle}>
-              {t(item.labelKey)}
-            </NavLink>
-          ))}
+        <nav aria-label={t('nav.mainMenu')} className="flex-1 overflow-y-auto p-3">
+          {renderNavGroups()}
         </nav>
-
-        <div className="border-t border-[#ECECEC] p-3">
-          {staffUsername ? (
-            <p className="mb-2 truncate px-1 text-xs text-gray-500" title={staffUsername}>
-              {t('app.signedInAs', { username: staffUsername })}
-            </p>
-          ) : null}
-          <Button variant="ghost" fullWidth onClick={() => void signOut()}>
-            {t('common.signOut')}
-          </Button>
-        </div>
+        {renderAccountFooter()}
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-[#ECECEC] bg-white px-4 py-3 lg:hidden">
-          <BrandMark compact />
-          <div className="flex items-center gap-2">
-            {staffUsername ? (
-              <span className="max-w-[100px] truncate text-xs text-gray-500" title={staffUsername}>
-                {staffUsername}
-              </span>
-            ) : null}
-            <LanguageSwitcher />
-            <Button variant="ghost" onClick={() => void signOut()}>
-              {t('common.out')}
-            </Button>
-          </div>
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#ECECEC] bg-white px-4 py-3 lg:hidden">
+          {renderBrandMark(true)}
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-expanded={menuOpen}
+            aria-controls="admin-mobile-menu"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#ECECEC] px-3 text-sm font-medium text-[#1A1A1A]"
+          >
+            <List size={20} aria-hidden />
+            {t('nav.menu')}
+          </button>
         </header>
 
-        <nav className="flex gap-1 overflow-x-auto border-b border-[#ECECEC] bg-white px-2 py-2 lg:hidden">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium tracking-tight transition ${
-                  isActive ? '' : 'text-gray-500'
-                }`
-              }
-              style={navLinkStyle}
-            >
-              {t(item.labelKey)}
-            </NavLink>
-          ))}
-        </nav>
+        {menuOpen ? (
+          <div
+            id="admin-mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('nav.mainMenu')}
+            className="fixed inset-0 z-40 flex flex-col bg-white lg:hidden"
+          >
+            <div className="flex items-center justify-between border-b border-[#ECECEC] px-4 py-3">
+              {renderBrandMark(true)}
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                aria-label={t('common.close')}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[#ECECEC]"
+              >
+                <X size={20} aria-hidden />
+              </button>
+            </div>
+            <nav className="flex-1 overflow-y-auto p-3">{renderNavGroups()}</nav>
+            <div className="border-t border-[#ECECEC] px-6 pt-3">
+              <LanguageSwitcher />
+            </div>
+            {renderAccountFooter()}
+          </div>
+        ) : null}
 
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1">
           <div className="mx-auto w-full max-w-6xl p-4 lg:p-10">
             <DemoBanner />
             <Outlet />

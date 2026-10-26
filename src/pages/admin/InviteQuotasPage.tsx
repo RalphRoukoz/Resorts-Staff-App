@@ -244,7 +244,23 @@ export function InviteQuotasPage() {
           <tbody className="divide-y divide-gray-100">
             {filteredUnits.map((unit) => (
               <tr key={unit.asset_id} className="transition hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium text-[#1A1A1A]">{unit.label}</td>
+                <td className="px-4 py-3 font-medium text-[#1A1A1A]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span>{unit.label}</span>
+                    {unit.asset_type === 'chalet' &&
+                    (unit.occupancy === 'rented' || unit.occupancy === 'owner') ? (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${
+                          unit.occupancy === 'rented'
+                            ? 'bg-amber-50 text-amber-800'
+                            : 'bg-sky-50 text-sky-700'
+                        }`}
+                      >
+                        {t(`inviteQuotas.occupancy.${unit.occupancy}`)}
+                      </span>
+                    ) : null}
+                  </div>
+                </td>
                 <td className="px-4 py-3 capitalize text-gray-600">{unit.asset_type}</td>
                 <td className="tnum px-4 py-3 text-gray-600">{unit.weekday_quota ?? '—'}</td>
                 <td className="tnum px-4 py-3 text-gray-600">{unit.weekend_quota ?? '—'}</td>
@@ -320,6 +336,22 @@ export function InviteQuotasPage() {
           }
         >
           <div className="space-y-4">
+            {modal.action === 'hand_over' &&
+            modal.unit.asset_type === 'chalet' &&
+            (modal.unit.occupancy === 'rented' || modal.unit.occupancy === 'owner') ? (
+              <p className="text-sm text-gray-600">
+                <span
+                  className={`mr-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${
+                    modal.unit.occupancy === 'rented'
+                      ? 'bg-amber-50 text-amber-800'
+                      : 'bg-sky-50 text-sky-700'
+                  }`}
+                >
+                  {t(`inviteQuotas.occupancy.${modal.unit.occupancy}`)}
+                </span>
+                {t('inviteQuotas.occupancyPrefillHint')}
+              </p>
+            ) : null}
             <Input
               label={t('inviteQuotas.weekdayAmount')}
               type="number"
